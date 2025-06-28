@@ -1,0 +1,32 @@
+services:
+  web-scraper:
+    build: .
+    container_name: atletismo-scraper
+    volumes:
+      # Montar código fuente para desarrollo (opcional)
+      - ./src:/app/src
+      # Volumen para datos/resultados
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+      # Variables de entorno para Puppeteer ya incluidas en la imagen base
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+    # Red para permitir comunicación externa
+    networks:
+      - scraper-network
+    # No reiniciar el contenedor - ejecutar solo una vez
+    restart: "no"
+    # Configuración de recursos (opcional)
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+networks:
+  scraper-network:
+    driver: bridge
+
+volumes:
+  scraper-data:
