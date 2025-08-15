@@ -1,7 +1,7 @@
 import AbstractWebScraper from "../AbstratWebScraper";
 import { Page } from "puppeteer";
 import { IScrapeResult } from "../interfaces";
-import { IUpslatInput, IPBScrapeResult } from "./interfaces";
+import { IUpslatInput, IPBScrapeResult, IPB } from "./interfaces";
 
 export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]> {
 
@@ -58,6 +58,36 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
             await this.page.close();
         }
         this.page = page;
+    }
+
+    async searchAthlete(input: IUpslatInput): Promise<string> {
+
+        try {
+            await this.page.goto(`${this.baseUrl}`, { waitUntil: 'networkidle2' });
+
+            await this.page.waitForSelector('input[name="s"]');
+
+            await this.page.type('input[name="s"]', input.name, { delay: 100 });
+
+            await Promise.all([
+                this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }),
+                this.page.click('button[type="submit"]')
+            ]);
+
+            await this.page.waitForSelector('.list-group a');
+            
+            const firstLinkHref = await this.page.$eval('.list-group a', (element) => {
+                return element.getAttribute('href') || '';
+            });
+
+            console.log('Primer enlace encontrado:', firstLinkHref);
+
+            return firstLinkHref.split('/').pop() || '';
+
+        } catch (error) {
+            console.error('Error en searchAthlete:', error);
+            return '';
+        }
     }
 
     async scrape(): Promise<IScrapeResult<IPBScrapeResult[]>> {
