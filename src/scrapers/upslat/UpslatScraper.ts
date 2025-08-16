@@ -6,11 +6,11 @@ import { IUpslatInput, IPBScrapeResult, IPB } from "./interfaces";
 export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]> {
 
     
-    protected input: IUpslatInput[];
+    protected input: IUpslatInput;
     protected page!: Page;
     protected baseUrl: string = 'https://atletismo.usplat.cl';
 
-    constructor(input: IUpslatInput[]) {
+    constructor(input: IUpslatInput) {
         super();
         this.input = input;
         this.data = {
@@ -60,14 +60,14 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
         this.page = page;
     }
 
-    async searchAthlete(input: IUpslatInput): Promise<string> {
+    async searchAthlete(name: string): Promise<string> {
 
         try {
             await this.page.goto(`${this.baseUrl}`, { waitUntil: 'networkidle2' });
 
             await this.page.waitForSelector('input[name="s"]');
 
-            await this.page.type('input[name="s"]', input.name, { delay: 100 });
+            await this.page.type('input[name="s"]', name, { delay: 100 });
 
             await Promise.all([
                 this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }),
@@ -208,8 +208,29 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
     async scrape(): Promise<IScrapeResult<IPBScrapeResult[]>> {
         super.scrape();
 
+        this.login(this.input.username, this.input.password);
+
         if (!this.page) {
             throw new Error('No se ha inicializado la página. Llama a login() primero.');
+        }
+
+        for( const athlete of this.input.athletes ) {
+            const athleteId = await this.searchAthlete(athlete.name);
+
+            if (!athleteId) {
+                console.warn(`No se encontró el atleta: ${athlete.name}`);
+                continue;
+            }
+
+            const personalBests = await this.getPersonalPBs(athleteId);
+            const seasonalBests = await this.getSeasonPBs(athleteId);
+
+            this.data.data.push({
+                name: athlete.name,
+                UpslatId: athleteId,
+                personalBests: personalBests,
+                seasonalBests: seasonalBests
+            });
         }
 
         await this.page.close();

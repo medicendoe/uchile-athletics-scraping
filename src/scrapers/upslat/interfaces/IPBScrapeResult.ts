@@ -1,14 +1,15 @@
-interface IPB {
+export interface IPB {
     event: string;
     record: {
-        unit: string;
+        wind: string;
         measurement: string;
     }
     date: string;
 }
 
-export default interface IPBScrapeResult {
+export interface IPBScrapeResult {
     name: string;
     UpslatId: string;
     personalBests: IPB[];
+    seasonalBests: IPB[];
 }
