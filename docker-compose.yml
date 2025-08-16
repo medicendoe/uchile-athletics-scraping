@@ -9,9 +9,10 @@ services:
       - ./data:/app/data
     environment:
       - NODE_ENV=production
-      # Variables de entorno para Puppeteer ya incluidas en la imagen base
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-    # Red para permitir comunicación externa
+      - UPSLAT_USERNAME=gabriel.egallardor@gmail.com
+      - UPSLAT_PASSWORD=5yS%4K&g**aVM47bp2DfmuY8sL!7x3oM
+      - ATHLETES=Domingo Ruiz Tala,Gabriel Gallardo Rodriguez, Irma Andrea Sheihing Histchfeld, Joaequin Sebastian Erribarren Asenjo
     networks:
       - scraper-network
     # No reiniciar el contenedor - ejecutar solo una vez
