@@ -90,6 +90,85 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
         }
     }
 
+    async getSeasonPBs(athleteId: string): Promise<IPB[]> {
+        try {
+
+            let results: IPB[] = [];
+
+            const url = `${this.baseUrl}/atleta/${athleteId}`;
+
+            await this.page.goto(url, { waitUntil: 'networkidle2' });
+
+            const seasonData = await this.page.evaluate(() => {
+
+                const events = document.querySelectorAll('.tab-content div:nth-child(2) .panel-group');
+
+                for (let eventElement of Array.from(events)) {
+
+                    const eventName = eventElement.querySelector('.panel-heading h4 a')?.textContent?.trim() || '';
+
+                    let best: IPB = {
+                        event: eventName,
+                        record: {
+                            wind: '',
+                            measurement: '',
+                        },
+                        date: ''
+                    };
+
+                    const records = eventElement.querySelectorAll('.panel-collapse .table-responsive .table tbody tr');
+
+                    for (let recordElement of Array.from(records)) {
+                        const cells = recordElement.querySelectorAll('td');
+                        if (cells.length >= 7) {
+                            const measurement = cells[0].textContent?.trim() || '';
+                            const wind = cells[1].textContent?.trim() || '';
+                            const date = cells[6].textContent?.trim() || '';
+
+                            function isTimeImprovement(newTime: string, currentBest: string): boolean {
+                                const newTimeParts = newTime.split(':').map(Number);
+                                const currentBestParts = currentBest.split(':').map(Number);
+
+                                if (newTimeParts.length > currentBestParts.length) {
+                                    return false;
+                                } else if (newTimeParts.length < currentBestParts.length) {
+                                    return true;
+                                }
+
+                                for (let i = Math.min(newTimeParts.length, currentBestParts.length) - 1; i >= 0; i--) {
+                                    if (newTimeParts[i] < currentBestParts[i]) {
+                                        return true;
+                                    } else if (newTimeParts[i] > currentBestParts[i]) {
+                                        return false;
+                                    }
+                                }
+                                return false;
+                            }
+
+                            if(measurement && (!best.record.measurement || isTimeImprovement(measurement, best.record.measurement)) && (Number(best.date.split(' ')[2]) == new Date().getFullYear())) {
+                                best.record.measurement = measurement;
+                                best.record.wind = wind;
+                                best.date = date;
+                            }
+                        }
+                    }
+
+                    if (best.record.measurement) {
+                        results.push(best);
+                    }
+                }
+                
+                return results;
+            });
+
+            return seasonData;
+
+        } catch (error) {
+            console.error('Error en getSeasonPBs:', error);
+            throw new Error('No se pudo obtener los mejores registros de la temporada.');
+        }
+    }
+
     async scrape(): Promise<IScrapeResult<IPBScrapeResult[]>> {
         super.scrape();
 
