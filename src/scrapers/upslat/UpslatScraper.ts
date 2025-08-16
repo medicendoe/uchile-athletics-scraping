@@ -158,14 +158,50 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
                     }
                 }
                 
-                return results;
             });
 
-            return seasonData;
+            return results;
 
         } catch (error) {
             console.error('Error en getSeasonPBs:', error);
             throw new Error('No se pudo obtener los mejores registros de la temporada.');
+        }
+    }
+
+    async getPersonalPBs(athleteId: string): Promise<IPB[]> {
+        try {
+
+            let results: IPB[] = [];
+
+            const url = `${this.baseUrl}/atleta/${athleteId}`;
+
+            await this.page.goto(url, { waitUntil: 'networkidle2' });
+
+            const personalData = await this.page.evaluate(() => {
+
+                const events = document.querySelectorAll('.tab-content div:nth-child(1) .panel .panel-body .table-responsive .table tbody tr');
+
+                for (let eventElement of Array.from(events)) {
+
+                    const data = Array.from(eventElement.querySelectorAll('td'));
+
+                    results.push({
+                        event: data[0].textContent?.trim() || '',
+                        record: {
+                            wind: data[2].textContent?.trim() || '',
+                            measurement: data[1].textContent?.trim() || '',
+                        },
+                        date: data[7].textContent?.trim() || ''
+                    });
+
+                }
+            });
+
+            return results;
+
+        } catch (error) {
+            console.error('Error en getPersonalPBs:', error);
+            throw new Error('No se pudo obtener los mejores registros personales.');
         }
     }
 
