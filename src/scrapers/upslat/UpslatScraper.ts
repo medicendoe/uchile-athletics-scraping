@@ -1,4 +1,4 @@
-import AbstractWebScraper from "../AbstratWebScraper";
+import AbstractWebScraper from "../AbstractWebScraper";
 import { Page } from "puppeteer";
 import { IScrapeResult } from "../interfaces";
 import { IUpslatInput, IPBScrapeResult, IPB } from "./interfaces";
@@ -80,8 +80,6 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
                 return element.getAttribute('href') || '';
             });
 
-            console.log('Primer enlace encontrado:', firstLinkHref);
-
             return firstLinkHref.split('/').pop() || '';
 
         } catch (error) {
@@ -93,14 +91,12 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
     async getSeasonPBs(athleteId: string): Promise<IPB[]> {
         try {
 
-            let results: IPB[] = [];
-
             const url = `${this.baseUrl}/atleta/${athleteId}`;
 
             await this.page.goto(url, { waitUntil: 'networkidle2' });
 
             const seasonData = await this.page.evaluate(() => {
-
+                let results: IPB[] = []; // Mover esta declaración aquí
                 const events = document.querySelectorAll('.tab-content div:nth-child(2) .panel-group');
 
                 for (let eventElement of Array.from(events)) {
@@ -122,6 +118,9 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
                         const cells = recordElement.querySelectorAll('td');
                         if (cells.length >= 7) {
                             const measurement = cells[0].textContent?.trim() || '';
+                            if (measurement === 'DNS' || measurement === 'DNF' || measurement === 'DQ' || measurement === 'NS' || measurement === 'NR') {
+                                continue;
+                            }
                             const wind = cells[1].textContent?.trim() || '';
                             const date = cells[6].textContent?.trim() || '';
 
@@ -145,7 +144,10 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
                                 return false;
                             }
 
-                            if(measurement && (!best.record.measurement || isTimeImprovement(measurement, best.record.measurement)) && (Number(best.date.split(' ')[2]) == new Date().getFullYear())) {
+                            const recordYear = parseInt(date.split(' ')[2] || '0');
+                            const currentYear = new Date().getFullYear();
+
+                            if(measurement && (!best.record.measurement || isTimeImprovement(measurement, best.record.measurement)) && recordYear === currentYear) {
                                 best.record.measurement = measurement;
                                 best.record.wind = wind;
                                 best.date = date;
@@ -158,9 +160,10 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
                     }
                 }
                 
+                return results; // Agregar esta línea al final del evaluate
             });
 
-            return results;
+            return seasonData; // Cambiar de 'results' a 'seasonData'
 
         } catch (error) {
             console.error('Error en getSeasonPBs:', error);
@@ -171,18 +174,17 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
     async getPersonalPBs(athleteId: string): Promise<IPB[]> {
         try {
 
-            let results: IPB[] = [];
-
             const url = `${this.baseUrl}/atleta/${athleteId}`;
 
             await this.page.goto(url, { waitUntil: 'networkidle2' });
 
             const personalData = await this.page.evaluate(() => {
 
+                let results: IPB[] = [];
+
                 const events = document.querySelectorAll('.tab-content div:nth-child(1) .panel .panel-body .table-responsive .table tbody tr');
 
                 for (let eventElement of Array.from(events)) {
-
                     const data = Array.from(eventElement.querySelectorAll('td'));
 
                     results.push({
@@ -193,11 +195,12 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
                         },
                         date: data[7].textContent?.trim() || ''
                     });
-
                 }
+
+                return results;
             });
 
-            return results;
+            return personalData;
 
         } catch (error) {
             console.error('Error en getPersonalPBs:', error);
@@ -208,7 +211,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
     async scrape(): Promise<IScrapeResult<IPBScrapeResult[]>> {
         super.scrape();
 
-        this.login(this.input.username, this.input.password);
+        await this.login(this.input.username, this.input.password);
 
         if (!this.page) {
             throw new Error('No se ha inicializado la página. Llama a login() primero.');
