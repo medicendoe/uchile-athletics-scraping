@@ -3,7 +3,7 @@ import { Page } from "puppeteer";
 import { IScrapeResult } from "../interfaces";
 import { IUpslatInput, IPBScrapeResult, IPB } from "./interfaces";
 
-export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]> {
+export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
 
     
     protected input: IUpslatInput;
@@ -16,7 +16,11 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
         this.data = {
             url: this.baseUrl,
             timestamp: new Date().toISOString(),
-            data: []
+            data: {
+                athletes: [],
+                seasonalBests: [],
+                allTimeBests: []
+            }
         }
     }
 
@@ -88,6 +92,37 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
         }
     }
 
+    parseTimeOrDistance(value: string): number {
+        if (value.includes(':')) {
+            const parts = value.split(':').map(Number);
+            if (parts.length === 2) return parts[0] * 60 + parts[1];
+            if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+            else throw new Error('Formato de tiempo no reconocido: ' + value);
+        } else {
+            return parseFloat(value);
+        }
+    }
+
+    isTimeImprovement(newTime: string, currentBest: string): boolean {
+        const newTimeParts = newTime.split(':').map(Number);
+        const currentBestParts = currentBest.split(':').map(Number);
+
+        if (newTimeParts.length > currentBestParts.length) {
+            return false;
+        } else if (newTimeParts.length < currentBestParts.length) {
+            return true;
+        }
+
+        for (let i = Math.min(newTimeParts.length, currentBestParts.length) - 1; i >= 0; i--) {
+            if (newTimeParts[i] < currentBestParts[i]) {
+                return true;
+            } else if (newTimeParts[i] > currentBestParts[i]) {
+                return false;
+            }
+        }
+        return false;
+    }
+
     async getSeasonPBs(athleteId: string): Promise<IPB[]> {
         try {
 
@@ -118,36 +153,16 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
                         const cells = recordElement.querySelectorAll('td');
                         if (cells.length >= 7) {
                             const measurement = cells[0].textContent?.trim() || '';
-                            if (measurement === 'DNS' || measurement === 'DNF' || measurement === 'DQ' || measurement === 'NS' || measurement === 'NR') {
+                            if (measurement === 'DNS' || measurement === 'DNF' || measurement === 'DQ' || measurement === 'NS' || measurement === 'NR' || measurement === 'NM') {
                                 continue;
                             }
                             const wind = cells[1].textContent?.trim() || '';
                             const date = cells[6].textContent?.trim() || '';
 
-                            function isTimeImprovement(newTime: string, currentBest: string): boolean {
-                                const newTimeParts = newTime.split(':').map(Number);
-                                const currentBestParts = currentBest.split(':').map(Number);
-
-                                if (newTimeParts.length > currentBestParts.length) {
-                                    return false;
-                                } else if (newTimeParts.length < currentBestParts.length) {
-                                    return true;
-                                }
-
-                                for (let i = Math.min(newTimeParts.length, currentBestParts.length) - 1; i >= 0; i--) {
-                                    if (newTimeParts[i] < currentBestParts[i]) {
-                                        return true;
-                                    } else if (newTimeParts[i] > currentBestParts[i]) {
-                                        return false;
-                                    }
-                                }
-                                return false;
-                            }
-
                             const recordYear = parseInt(date.split(' ')[2] || '0');
                             const currentYear = new Date().getFullYear();
 
-                            if(measurement && (!best.record.measurement || isTimeImprovement(measurement, best.record.measurement)) && recordYear === currentYear) {
+                            if(measurement && (!best.record.measurement || this.isTimeImprovement(measurement, best.record.measurement)) && recordYear === currentYear) {
                                 best.record.measurement = measurement;
                                 best.record.wind = wind;
                                 best.date = date;
@@ -208,7 +223,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
         }
     }
 
-    async scrape(): Promise<IScrapeResult<IPBScrapeResult[]>> {
+    async scrape(): Promise<IScrapeResult<IPBScrapeResult>> {
         super.scrape();
 
         await this.login(this.input.username, this.input.password);
@@ -228,11 +243,77 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult[]>
             const personalBests = await this.getPersonalPBs(athleteId);
             const seasonalBests = await this.getSeasonPBs(athleteId);
 
-            this.data.data.push({
+            this.data.data.athletes.push({
                 name: athlete.name,
                 UpslatId: athleteId,
                 personalBests: personalBests,
                 seasonalBests: seasonalBests
+            });
+        }
+
+        for( const athlete of this.data.data.athletes ) {
+            if (athlete.personalBests.length > 0) {
+                for( const pb of athlete.personalBests ) {
+                    let existingEvent = this.data.data.seasonalBests.find((event) => event.event === pb.event);
+                    
+                    if (!existingEvent) {
+                        existingEvent = {
+                            event: pb.event,
+                            records: []
+                        };
+                        this.data.data.seasonalBests.push(existingEvent);
+                    }
+                    
+                    const existingRecord = existingEvent.records.find(record => record.athlete === athlete.name);
+                    if (!existingRecord) {
+                        existingEvent.records.push({
+                            athlete: athlete.name,
+                            measurement: pb.record.measurement,
+                            wind: pb.record.wind,
+                            date: pb.date
+                        });
+                    }
+                }
+            }
+
+            if (athlete.seasonalBests.length > 0) {
+                for( const sb of athlete.seasonalBests ) {
+                    let existingEvent = this.data.data.seasonalBests.find((event) => event.event === sb.event);
+                    
+                    if (!existingEvent) {
+                        existingEvent = {
+                            event: sb.event,
+                            records: []
+                        };
+                        this.data.data.seasonalBests.push(existingEvent);
+                    }
+                    
+                    const existingRecord = existingEvent.records.find(record => record.athlete === athlete.name);
+                    if (!existingRecord) {
+                        existingEvent.records.push({
+                            athlete: athlete.name,
+                            measurement: sb.record.measurement,
+                            wind: sb.record.wind,
+                            date: sb.date
+                        });
+                    }
+                }
+            }
+        }
+
+        for (const event of this.data.data.seasonalBests) {
+            const isFieldEvent = event.event.toLowerCase().includes('lanzamiento') || 
+                                event.event.toLowerCase().includes('salto');
+            
+            event.records.sort((a, b) => {
+                const measurementA = this.parseTimeOrDistance(a.measurement);
+                const measurementB = this.parseTimeOrDistance(b.measurement);
+                
+                if (isFieldEvent) {
+                    return measurementB - measurementA;
+                } else {
+                    return measurementA - measurementB;
+                }
             });
         }
 
