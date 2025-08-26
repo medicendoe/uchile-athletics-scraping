@@ -1,0 +1,71 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { loadScrapingData, getAthleteStats, getAllEvents } from '../utils/dataUtils';
+
+const data = loadScrapingData();
+const athletes = data.data;
+const totalAthletes = athletes.length;
+const allEvents = getAllEvents(athletes);
+const totalEvents = allEvents.length;
+
+// Estadísticas generales
+const totalPBs = athletes.reduce((sum, athlete) => sum + athlete.personalBests.length, 0);
+const totalSeasonalBests = athletes.reduce((sum, athlete) => sum + athlete.seasonalBests.length, 0);
+
+// Últimos datos actualizados
+const lastUpdate = new Date(data.timestamp).toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+});
+---
+
+<Layout title="Atletismo Stats - Estadísticas de Atletismo">
+
+	<div class="card">
+		<div class="card-header">
+			<h2 class="card-title">🏆 Marcas Personales</h2>
+			<p class="card-subtitle">Mejores marcas históricas</p>
+		</div>
+		<div class="card-body">
+			{sortedPBs.length > 0 ? (
+				<div style="overflow-x: auto;">
+					<table style="width: 100%; border-collapse: collapse;">
+						<thead>
+							<tr style="border-bottom: 2px solid var(--border-color);">
+								<th style="text-align: left; padding: 0.75rem; font-weight: 600;">Evento</th>
+								<th style="text-align: left; padding: 0.75rem; font-weight: 600;">Marca</th>
+								<th style="text-align: left; padding: 0.75rem; font-weight: 600;">Viento</th>
+								<th style="text-align: left; padding: 0.75rem; font-weight: 600;">Fecha</th>
+							</tr>
+						</thead>
+						<tbody>
+							{sortedPBs.map((pb, index) => (
+								<tr style={`border-bottom: 1px solid var(--border-color); ${index % 2 === 0 ? 'background: var(--background-color);' : ''}`}>
+									<td style="padding: 0.75rem; font-weight: 500;">
+										{pb.event}
+									</td>
+									<td style="padding: 0.75rem; font-weight: 600; color: var(--primary-color);">
+										{formatTime(pb.record.measurement)}
+									</td>
+									<td style="padding: 0.75rem; color: var(--text-secondary);">
+										{formatWind(pb.record.wind) || '-'}
+									</td>
+									<td style="padding: 0.75rem; color: var(--text-secondary);">
+										{formatDate(pb.date)}
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			) : (
+				<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">
+					No hay marcas personales registradas.
+				</p>
+			)}
+		</div>
+	</div>
+</Layout>

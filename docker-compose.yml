@@ -30,9 +30,48 @@ services:
         reservations:
           memory: 512M
 
-networks:
-  scraper-network:
-    driver: bridge
+  # Servicio Web Astro - Constructor
+  web-builder:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      target: build-only
+    container_name: atletismo-web-builder
+    volumes:
+      # Datos del scraper como entrada
+      - ./data:/app/data:ro
+      # Salida del sitio construido
+      - ./dist:/app/output
+    environment:
+      - NODE_ENV=production
+    networks:
+      - atletismo-network
+    restart: "no"
+    profiles:
+      - web
+    depends_on:
+      - scraper
 
-volumes:
-  scraper-data:
+  # Servidor web para servir el sitio
+  web-server:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      target: server
+    container_name: atletismo-web-server
+    ports:
+      - "3000:3000"
+    volumes:
+      # Sitio construido
+      - ./dist:/usr/share/nginx/html:ro
+    networks:
+      - atletismo-network
+    restart: unless-stopped
+    profiles:
+      - server
+    depends_on:
+      - web-builder
+
+networks:
+  atletismo-network:
+    driver: bridge

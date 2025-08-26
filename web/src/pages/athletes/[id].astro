@@ -1,0 +1,146 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { loadScrapingData, getAthleteStats, formatTime, formatWind, formatDate } from '../../utils/dataUtils';
+
+export async function getStaticPaths() {
+    const data = loadScrapingData();
+    return data.data.map(athlete => ({
+        params: { id: athlete.UpslatId },
+        props: { athlete }
+    }));
+}
+
+const { athlete } = Astro.props;
+const stats = getAthleteStats(athlete);
+
+// Ordenar marcas por evento
+const sortedPBs = [...athlete.personalBests].sort((a, b) => a.event.localeCompare(b.event));
+const sortedSeasonalBests = [...athlete.seasonalBests].sort((a, b) => a.event.localeCompare(b.event));
+---
+
+<Layout title={`${athlete.name} - Atletismo Stats`}>
+    <div style="margin-bottom: 2rem;">
+        <a href="/athletes" style="color: var(--primary-color); text-decoration: none;">← Volver a Atletas</a>
+    </div>
+
+    <div class="page-title">{athlete.name}</div>
+    <p class="page-description">
+        ID: {athlete.UpslatId} • {stats.events.length} eventos • {stats.totalPBs + stats.totalSeasonalBests} marcas totales
+    </p>
+
+    <!-- Estadísticas del atleta -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{stats.totalPBs}</div>
+            <div class="stat-label">Marcas Personales</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{stats.totalSeasonalBests}</div>
+            <div class="stat-label">Mejores de Temporada 2025</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{stats.events.length}</div>
+            <div class="stat-label">Eventos</div>
+        </div>
+        <div class="stat-card">
+            <div style="font-size: 1.2rem; font-weight: bold; color: var(--primary-color);">
+                {stats.bestEvent || 'N/A'}
+            </div>
+            <div class="stat-label">Evento Principal</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1" style="margin-top: 2rem;">
+        <!-- Marcas Personales -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🏆 Marcas Personales</h2>
+                <p class="card-subtitle">Mejores marcas históricas</p>
+            </div>
+            <div class="card-body">
+                {sortedPBs.length > 0 ? (
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--border-color);">
+                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Evento</th>
+                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Marca</th>
+                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Viento</th>
+                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sortedPBs.map((pb, index) => (
+                                    <tr style={`border-bottom: 1px solid var(--border-color); ${index % 2 === 0 ? 'background: var(--background-color);' : ''}`}>
+                                        <td style="padding: 0.75rem; font-weight: 500;">
+                                            {pb.event}
+                                        </td>
+                                        <td style="padding: 0.75rem; font-weight: 600; color: var(--primary-color);">
+                                            {formatTime(pb.record.measurement)}
+                                        </td>
+                                        <td style="padding: 0.75rem; color: var(--text-secondary);">
+                                            {formatWind(pb.record.wind) || '-'}
+                                        </td>
+                                        <td style="padding: 0.75rem; color: var(--text-secondary);">
+                                            {formatDate(pb.date)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">
+                        No hay marcas personales registradas.
+                    </p>
+                )}
+            </div>
+        </div>
+
+        <!-- Mejores de Temporada -->
+        <div class="card" style="margin-top: 2rem;">
+            <div class="card-header">
+                <h2 class="card-title">🏃‍♂️ Mejores de Temporada 2025</h2>
+                <p class="card-subtitle">Mejores marcas de la temporada actual</p>
+            </div>
+            <div class="card-body">
+                {sortedSeasonalBests.length > 0 ? (
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--border-color);">
+                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Evento</th>
+                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Marca</th>
+                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Viento</th>
+                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sortedSeasonalBests.map((sb, index) => (
+                                    <tr style={`border-bottom: 1px solid var(--border-color); ${index % 2 === 0 ? 'background: var(--background-color);' : ''}`}>
+                                        <td style="padding: 0.75rem; font-weight: 500;">
+                                            {sb.event}
+                                        </td>
+                                        <td style="padding: 0.75rem; font-weight: 600; color: var(--accent-color);">
+                                            {formatTime(sb.record.measurement)}
+                                        </td>
+                                        <td style="padding: 0.75rem; color: var(--text-secondary);">
+                                            {formatWind(sb.record.wind) || '-'}
+                                        </td>
+                                        <td style="padding: 0.75rem; color: var(--text-secondary);">
+                                            {formatDate(sb.date)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">
+                        No hay mejores marcas de temporada registradas.
+                    </p>
+                )}
+            </div>
+        </div>
+    </div>
+</Layout>

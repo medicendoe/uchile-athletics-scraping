@@ -1,0 +1,81 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { loadScrapingData, getAthleteStats } from '../utils/dataUtils';
+
+const data = loadScrapingData();
+const athletes = data.data;
+
+// Ordenar atletas por nombre
+athletes.sort((a, b) => a.name.localeCompare(b.name));
+---
+
+<Layout title="Atletas - Atletismo Stats">
+    <div class="page-title">👥 Atletas</div>
+    <p class="page-description">
+        Lista completa de atletas con sus estadísticas y mejores marcas.
+    </p>
+
+    <div class="grid grid-cols-1">
+        {athletes.map(athlete => {
+            const stats = getAthleteStats(athlete);
+            return (
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <a href={`/athletes/${athlete.UpslatId}`} style="color: white; text-decoration: none;">
+                                {athlete.name}
+                            </a>
+                        </h3>
+                        <p class="card-subtitle">ID: {athlete.UpslatId}</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-number">{stats.totalPBs}</div>
+                                <div class="stat-label">Marcas Personales</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">{stats.totalSeasonalBests}</div>
+                                <div class="stat-label">Mejores 2025</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">{stats.events.length}</div>
+                                <div class="stat-label">Eventos</div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1rem;">
+                            <strong>Eventos principales:</strong>
+                            <div style="margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                {stats.events.slice(0, 5).map(event => (
+                                    <span style="background: var(--background-color); padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.8rem; color: var(--text-secondary);">
+                                        {event}
+                                    </span>
+                                ))}
+                                {stats.events.length > 5 && (
+                                    <span style="color: var(--text-secondary); font-size: 0.8rem;">
+                                        +{stats.events.length - 5} más
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1.5rem;">
+                            <a href={`/athletes/${athlete.UpslatId}`} class="btn">Ver Detalles</a>
+                        </div>
+                    </div>
+                </div>
+            );
+        })}
+    </div>
+
+    {athletes.length === 0 && (
+        <div class="card">
+            <div class="card-body" style="text-align: center; padding: 3rem;">
+                <p style="color: var(--text-secondary); font-size: 1.1rem;">
+                    No hay datos de atletas disponibles.
+                </p>
+            </div>
+        </div>
+    )}
+</Layout>
