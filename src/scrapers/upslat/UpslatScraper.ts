@@ -103,26 +103,6 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
         }
     }
 
-    isTimeImprovement(newTime: string, currentBest: string): boolean {
-        const newTimeParts = newTime.split(':').map(Number);
-        const currentBestParts = currentBest.split(':').map(Number);
-
-        if (newTimeParts.length > currentBestParts.length) {
-            return false;
-        } else if (newTimeParts.length < currentBestParts.length) {
-            return true;
-        }
-
-        for (let i = Math.min(newTimeParts.length, currentBestParts.length) - 1; i >= 0; i--) {
-            if (newTimeParts[i] < currentBestParts[i]) {
-                return true;
-            } else if (newTimeParts[i] > currentBestParts[i]) {
-                return false;
-            }
-        }
-        return false;
-    }
-
     async getSeasonPBs(athleteId: string): Promise<IPB[]> {
         try {
 
@@ -131,6 +111,27 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
             await this.page.goto(url, { waitUntil: 'networkidle2' });
 
             const seasonData = await this.page.evaluate(() => {
+
+                function isTimeImprovement(newTime: string, currentBest: string): boolean {
+                    const newTimeParts = newTime.split(':').map(Number);
+                    const currentBestParts = currentBest.split(':').map(Number);
+
+                    if (newTimeParts.length > currentBestParts.length) {
+                        return false;
+                    } else if (newTimeParts.length < currentBestParts.length) {
+                        return true;
+                    }
+
+                    for (let i = Math.min(newTimeParts.length, currentBestParts.length) - 1; i >= 0; i--) {
+                        if (newTimeParts[i] < currentBestParts[i]) {
+                            return true;
+                        } else if (newTimeParts[i] > currentBestParts[i]) {
+                            return false;
+                        }
+                    }
+                    return false;
+                }
+
                 let results: IPB[] = []; // Mover esta declaración aquí
                 const events = document.querySelectorAll('.tab-content div:nth-child(2) .panel-group');
 
@@ -162,7 +163,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                             const recordYear = parseInt(date.split(' ')[2] || '0');
                             const currentYear = new Date().getFullYear();
 
-                            if(measurement && (!best.record.measurement || this.isTimeImprovement(measurement, best.record.measurement)) && recordYear === currentYear) {
+                            if(measurement && (!best.record.measurement || isTimeImprovement(measurement, best.record.measurement)) && recordYear === currentYear) {
                                 best.record.measurement = measurement;
                                 best.record.wind = wind;
                                 best.date = date;
@@ -254,14 +255,14 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
         for( const athlete of this.data.data.athletes ) {
             if (athlete.personalBests.length > 0) {
                 for( const pb of athlete.personalBests ) {
-                    let existingEvent = this.data.data.seasonalBests.find((event) => event.event === pb.event);
-                    
+                    let existingEvent = this.data.data.allTimeBests.find((event) => event.event === pb.event);
+
                     if (!existingEvent) {
                         existingEvent = {
                             event: pb.event,
                             records: []
                         };
-                        this.data.data.seasonalBests.push(existingEvent);
+                        this.data.data.allTimeBests.push(existingEvent);
                     }
                     
                     const existingRecord = existingEvent.records.find(record => record.athlete === athlete.name);
@@ -301,7 +302,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
             }
         }
 
-        for (const event of this.data.data.seasonalBests) {
+        for (const event of [...this.data.data.seasonalBests, ...this.data.data.allTimeBests]) {
             const isFieldEvent = event.event.toLowerCase().includes('lanzamiento') || 
                                 event.event.toLowerCase().includes('salto');
             
