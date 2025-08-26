@@ -6,9 +6,7 @@ services:
       dockerfile: Dockerfile
     container_name: atletismo-scraper
     volumes:
-      # Montar código fuente para desarrollo (opcional)
       - ./scraper/src:/app/src
-      # Volumen para datos/resultados compartido
       - ./data:/app/data
     environment:
       - NODE_ENV=production
@@ -18,11 +16,7 @@ services:
       - ATHLETES=Domingo Ruiz Tala,Gabriel Gallardo Rodriguez, Irma Andrea Sheihing Histchfeld, Joaequin Sebastian Erribarren Asenjo
     networks:
       - atletismo-network
-    # No reiniciar el contenedor - ejecutar solo una vez
     restart: "no"
-    profiles:
-      - scraper
-    # Configuración de recursos (opcional)
     deploy:
       resources:
         limits:
@@ -35,42 +29,15 @@ services:
     build:
       context: ./web
       dockerfile: Dockerfile
-      target: build-only
     container_name: atletismo-web-builder
     volumes:
-      # Datos del scraper como entrada
       - ./data:/app/data:ro
-      # Salida del sitio construido
       - ./dist:/app/output
     environment:
       - NODE_ENV=production
     networks:
       - atletismo-network
     restart: "no"
-    profiles:
-      - web
-    depends_on:
-      - scraper
-
-  # Servidor web para servir el sitio
-  web-server:
-    build:
-      context: ./web
-      dockerfile: Dockerfile
-      target: server
-    container_name: atletismo-web-server
-    ports:
-      - "3000:3000"
-    volumes:
-      # Sitio construido
-      - ./dist:/usr/share/nginx/html:ro
-    networks:
-      - atletismo-network
-    restart: unless-stopped
-    profiles:
-      - server
-    depends_on:
-      - web-builder
 
 networks:
   atletismo-network:
