@@ -11,6 +11,10 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.json ./
 COPY types/ ./
+COPY entrypoint.sh ./
+
+# Hacer el script ejecutable
+RUN chmod +x /app/entrypoint.sh
 
 # Instalar dependencias
 RUN npm ci
@@ -24,6 +28,7 @@ RUN npm run build
 # Configurar permisos para el usuario pptruser (ya existe en la imagen base)
 RUN mkdir -p /home/pptruser/Downloads \
     && mkdir -p /home/pptruser/.cache/puppeteer \
+    && mkdir -p /app/data \
     && chown -R pptruser:pptruser /home/pptruser \
     && chown -R pptruser:pptruser /app
 
@@ -43,4 +48,5 @@ USER pptruser
 EXPOSE 3000
 
 # Comando por defecto
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["npm", "start"]
