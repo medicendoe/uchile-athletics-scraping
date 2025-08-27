@@ -28,6 +28,10 @@ jobs:
   scrape-and-build:
     runs-on: ubuntu-latest
     
+    env:
+      UPSLAT_USERNAME: ${{ vars.UPSLAT_USERNAME }}
+      UPSLAT_PASSWORD: ${{ secrets.UPSLAT_PASSWORD }}
+      ATHLETES: ${{ vars.ATHLETES }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
