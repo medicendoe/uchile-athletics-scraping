@@ -1,125 +1,100 @@
-# Atletismo Web Scraper
+# Plataforma de Atletismo
 
-Un proyecto de web scraping usando TypeScript y Puppeteer, ejecutándose en Docker.
+Plataforma completa que incluye un scraper para obtener datos de atletas y una aplicación web Astro para generar páginas estáticas.
 
 ## Estructura del Proyecto
 
 ```
-.
-├── Dockerfile              # Configuración de Docker
-├── docker-compose.yml      # Orquestación de contenedores
-├── package.json            # Dependencias de Node.js
-├── tsconfig.json          # Configuración de TypeScript
-├── src/
-│   └── index.ts           # Código principal del scraper
-├── data/                  # Directorio para resultados (creado automáticamente)
-└── README.md              # Este archivo
+├── scraper/          # Servicio de scraping con Puppeteer
+│   ├── Dockerfile
+│   ├── src/
+│   └── package.json
+├── web/              # Aplicación web con Astro  
+│   ├── Dockerfile
+│   ├── src/
+│   └── package.json
+├── data/             # Datos compartidos entre servicios
+├── dist/             # Páginas estáticas generadas
+└── generate-static.sh # Script para generar páginas estáticas
 ```
 
-## Uso
+## Uso Rápido
 
-### Desarrollo Local
-
-1. **Instalar dependencias:**
-   ```bash
-   npm install
-   ```
-
-2. **Ejecutar en modo desarrollo:**
-   ```bash
-   npm run dev
-   ```
-
-3. **Compilar TypeScript:**
-   ```bash
-   npm run build
-   ```
-
-### Uso con Docker
-
-1. **Construir y ejecutar con docker-compose:**
-   ```bash
-   docker-compose up --build
-   ```
-
-2. **Ejecutar en segundo plano:**
-   ```bash
-   docker-compose up -d
-   ```
-
-3. **Ver logs:**
-   ```bash
-   docker-compose logs -f
-   ```
-
-4. **Detener:**
-   ```bash
-   docker-compose down
-   ```
-
-### Solo Docker (sin compose)
-
-1. **Construir imagen:**
-   ```bash
-   docker build -t atletismo-scraper .
-   ```
-
-2. **Ejecutar contenedor:**
-   ```bash
-   docker run --rm -v $(pwd)/data:/app/data atletismo-scraper
-   ```
-
-## Configuración
-
-### Variables de Entorno
-
-- `NODE_ENV`: Entorno de ejecución (development/production)
-- `PUPPETEER_EXECUTABLE_PATH`: Ruta al ejecutable de Chrome
-- `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD`: Evita descargar Chromium
-
-### Personalización del Scraper
-
-Edita `src/index.ts` para:
-
-- Cambiar las URLs objetivo
-- Modificar los selectores CSS
-- Personalizar la lógica de extracción de datos
-- Ajustar delays entre requests
-
-## Características
-
-- ✅ Ejecuta en contenedor Docker optimizado
-- ✅ Soporte completo para Puppeteer
-- ✅ Configuración de seguridad (usuario no root)
-- ✅ TypeScript con tipos estrictos
-- ✅ Manejo de errores robusto
-- ✅ Resultados guardados en JSON
-- ✅ Delays respetuosos entre requests
-
-## Consideraciones de Ética y Legalidad
-
-- Siempre respeta el archivo `robots.txt` del sitio web
-- Implementa delays apropiados entre requests
-- No sobrecargues los servidores objetivo
-- Verifica los términos de servicio del sitio web
-- Considera usar APIs públicas cuando estén disponibles
-
-## Troubleshooting
-
-### Error de Chrome/Chromium
-Si tienes problemas con Chrome, verifica que las dependencias estén instaladas:
+### 1. Hacer scraping de datos
 ```bash
-docker-compose exec web-scraper google-chrome-stable --version
+# Ejecutar el scraper para obtener datos de atletismo
+docker compose up scraper
 ```
 
-### Problemas de Memoria
-Si el contenedor se queda sin memoria, ajusta los límites en `docker-compose.yml`:
-```yaml
-deploy:
-  resources:
-    limits:
-      memory: 2G
+### 2. Generar páginas estáticas
+```bash
+# Opción A: Usar script (recomendado)
+./generate-static.sh
+
+# Opción B: Comando directo
+docker compose run --rm web-builder
 ```
 
-### Permisos de Archivos
-Los resultados se guardan en `./data/` con permisos del usuario del contenedor.
+### 3. Servir páginas localmente (opcional)
+```bash
+# Ir a la carpeta de páginas generadas
+cd dist
+
+# Servir con Python
+python3 -m http.server 8000
+
+# O con Node.js
+npx serve .
+```
+
+## Características de la Web
+
+- **Página de inicio** con estadísticas generales y navegación
+- **Rankings de todos los tiempos** - mejores marcas personales históricas
+- **Rankings de temporada** - mejores marcas de la temporada actual  
+- **Lista de atletas** - todos los atletas con sus estadísticas
+- **Páginas individuales** - detalles completos de cada atleta
+- **Navegación completa** - enlaces entre atletas desde cualquier página
+- **Diseño responsive** - funciona en móviles y desktop
+
+## Comandos Disponibles
+
+| Comando | Descripción |
+|---------|-------------|
+| `npm run scrape` | Ejecutar solo el scraper |
+| `npm run build:web` | Construir solo la web |
+| `npm run serve` | Levantar servidor web |
+| `npm run stop` | Detener servidor web |
+| `npm run deploy` | Proceso completo automatizado |
+| `npm run clean` | Limpiar contenedores y cache |
+| `npm run logs:scraper` | Ver logs del scraper |
+| `npm run logs:web` | Ver logs de construcción web |
+| `npm run logs:server` | Ver logs del servidor |
+
+## Desarrollo Local
+
+### Scraper
+```bash
+cd scraper
+npm install
+npm run dev
+```
+
+### Web
+```bash
+cd web  
+npm install
+npm run dev
+```
+
+## Arquitectura
+
+- **Scraper**: Container independiente que ejecuta Puppeteer y guarda datos en `./data`
+- **Web Builder**: Container que toma datos de `./data` y construye sitio estático en `./dist` 
+- **Web Server**: Container nginx que sirve el sitio desde `./dist`
+
+## Profiles de Docker Compose
+
+- `scraper`: Solo ejecuta el scraping
+- `web`: Solo construye la aplicación web
+- `server`: Solo levanta el servidor web
