@@ -11,10 +11,6 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.json ./
 COPY types/ ./
-COPY entrypoint.sh ./
-
-# Hacer el script ejecutable
-RUN chmod +x /app/entrypoint.sh
 
 # Instalar dependencias
 RUN npm ci
@@ -48,5 +44,4 @@ USER pptruser
 EXPOSE 3000
 
 # Comando por defecto
-ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["npm", "start"]
