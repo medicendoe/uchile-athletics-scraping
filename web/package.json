@@ -1,0 +1,17 @@
+{
+  "name": "atletismo-stats",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Páginas estáticas generadas automáticamente con datos de atletismo",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "sync-data": "echo 'Datos sincronizados por Docker'",
+    "deploy": "npm run build && echo 'Sitio listo para desplegar en dist/'"
+  },
+  "dependencies": {
+    "astro": "^5.13.2"
+  }
+}

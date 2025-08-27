@@ -1,32 +1,42 @@
 services:
-  web-scraper:
-    build: .
+  # Servicio de Scraping
+  scraper:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
     container_name: atletismo-scraper
     volumes:
-      # Montar código fuente para desarrollo (opcional)
-      - ./src:/app/src
-      # Volumen para datos/resultados
+      - ./scraper/src:/app/src
       - ./data:/app/data
-    environment:
-      - NODE_ENV=production
-      # Variables de entorno para Puppeteer ya incluidas en la imagen base
-      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-    # Red para permitir comunicación externa
+    env_file:
+      - .env
     networks:
-      - scraper-network
-    # No reiniciar el contenedor - ejecutar solo una vez
+      - atletismo-network
     restart: "no"
-    # Configuración de recursos (opcional)
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 3G
         reservations:
-          memory: 512M
+          memory: 1G
+
+  # Servicio Web Astro - Generador de páginas estáticas
+  web-builder:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: atletismo-web-builder
+    volumes:
+      - ./data:/tmp/data:ro
+      - ./dist:/app/output
+    env_file:
+      - .env
+    networks:
+      - atletismo-network
+    restart: "no"
+    depends_on:
+      - scraper
 
 networks:
-  scraper-network:
+  atletismo-network:
     driver: bridge
-
-volumes:
-  scraper-data:

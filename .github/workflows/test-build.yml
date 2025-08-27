@@ -1,0 +1,45 @@
+name: Test Build
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install scraper dependencies
+        working-directory: ./scraper
+        run: npm install
+        
+      - name: Install web dependencies
+        working-directory: ./web
+        run: npm install
+        
+      - name: Build scraper
+        working-directory: ./scraper
+        run: npm run build
+        
+      - name: Create mock data for testing
+        run: |
+          mkdir -p data
+          mkdir -p web/src/data
+          echo '[]' > web/src/data/upslat-scrape-results.json
+          
+      - name: Test Astro build
+        working-directory: ./web
+        run: npm run build
+        
+      - name: Verify build output
+        run: |
+          ls -la web/dist/
+          echo "Build completed successfully!"

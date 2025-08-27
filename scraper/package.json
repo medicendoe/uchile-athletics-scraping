@@ -9,16 +9,22 @@
     "dev": "ts-node src/index.ts",
     "dev:watch": "nodemon --exec ts-node src/index.ts"
   },
-  "keywords": ["typescript", "puppeteer", "web-scraping", "atletismo"],
+  "keywords": [
+    "typescript",
+    "puppeteer",
+    "web-scraping",
+    "atletismo"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "dotenv": "^17.2.1",
     "puppeteer": "^21.11.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.6",
-    "typescript": "^5.3.3",
+    "nodemon": "^3.0.2",
     "ts-node": "^10.9.2",
-    "nodemon": "^3.0.2"
+    "typescript": "^5.3.3"
   }
 }

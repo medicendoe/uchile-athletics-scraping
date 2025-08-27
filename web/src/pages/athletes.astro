@@ -1,0 +1,200 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { loadScrapingData } from '../utils/dataUtils';
+
+const data = loadScrapingData();
+const athletes = data.data.athletes;
+
+// Ordenar atletas por nombre
+athletes.sort((a, b) => a.name.localeCompare(b.name));
+---
+
+<Layout title="Atletas - Atletismo Stats">
+    <div class="page-title">👥 Atletas</div>
+    <p class="page-description">
+        Lista completa de atletas registrados en el sistema.
+    </p>
+
+    <div class="nav-buttons">
+        <a href={import.meta.env.BASE_URL} class="nav-link">← Inicio</a>
+        <a href={`${import.meta.env.BASE_URL}rankings/all-time`} class="nav-link">Todos los Tiempos</a>
+        <a href={`${import.meta.env.BASE_URL}rankings/season`} class="nav-link">Temporada</a>
+    </div>
+
+    <div class="athletes-table-container">
+        <table class="athletes-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nombre del Atleta</th>
+                    <th>ID Usplat</th>
+                </tr>
+            </thead>
+            <tbody>
+                {athletes.map((athlete, index) => (
+                    <tr>
+                        <td class="index-cell">{index + 1}</td>
+                        <td class="name-cell">
+                            <a href={`${import.meta.env.BASE_URL}athletes/${athlete.UpslatId}`}>
+                                {athlete.name}
+                            </a>
+                        </td>
+                        <td class="id-cell">{athlete.UpslatId}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    </div>
+
+    {athletes.length === 0 && (
+        <div class="card">
+            <div class="card-body" style="text-align: center; padding: 3rem;">
+                <p style="color: var(--text-secondary); font-size: 1.1rem;">
+                    No hay datos de atletas disponibles.
+                </p>
+            </div>
+        </div>
+    )}
+</Layout>
+</Layout>
+
+<style>
+    .nav-buttons {
+        display: flex;
+        gap: 1rem;
+        margin: 1.5rem 0;
+        flex-wrap: wrap;
+    }
+
+    .nav-link {
+        padding: 0.5rem 1rem;
+        background: var(--card-background);
+        color: var(--text-color);
+        text-decoration: none;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+    }
+
+    .nav-link:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .athletes-table-container {
+        margin-top: 2rem;
+        background: var(--card-background);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .athletes-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--card-background);
+    }
+
+    .athletes-table thead th {
+        background: var(--primary-color);
+        color: white;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border-bottom: 2px solid var(--primary-color);
+    }
+
+    .athletes-table tbody tr {
+        border-bottom: 1px solid var(--border-color);
+        transition: background-color 0.2s ease;
+    }
+
+    .athletes-table tbody tr:hover {
+        background: var(--background-color);
+    }
+
+    .athletes-table tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .athletes-table td {
+        padding: 1rem;
+        vertical-align: middle;
+    }
+
+    .index-cell {
+        width: 80px;
+        text-align: center;
+        font-weight: 500;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .name-cell {
+        font-weight: 500;
+    }
+
+    .name-cell a {
+        color: var(--text-color);
+        text-decoration: none;
+        transition: color 0.3s ease;
+        font-size: 1rem;
+    }
+
+    .name-cell a:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
+    }
+
+    .id-cell {
+        width: 120px;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        font-family: 'Courier New', monospace;
+    }
+
+    @media (max-width: 768px) {
+        .athletes-table-container {
+            overflow-x: auto;
+        }
+
+        .athletes-table {
+            min-width: 500px;
+        }
+
+        .athletes-table td,
+        .athletes-table th {
+            padding: 0.75rem 0.5rem;
+        }
+
+        .nav-buttons {
+            flex-direction: column;
+        }
+
+        .index-cell {
+            width: 60px;
+        }
+
+        .id-cell {
+            width: 100px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .athletes-table td,
+        .athletes-table th {
+            padding: 0.5rem 0.25rem;
+        }
+
+        .name-cell a {
+            font-size: 0.9rem;
+        }
+
+        .id-cell {
+            font-size: 0.8rem;
+        }
+    }
+</style>
