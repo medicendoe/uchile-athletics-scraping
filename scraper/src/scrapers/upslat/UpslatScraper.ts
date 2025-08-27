@@ -65,6 +65,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
     }
 
     async searchAthlete(name: string): Promise<string> {
+        console.log(`Buscando atleta: ${name}`);
 
         try {
             await this.page.goto(`${this.baseUrl}`, { waitUntil: 'networkidle2' });
@@ -74,7 +75,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
             await this.page.type('input[name="s"]', name, { delay: 100 });
 
             await Promise.all([
-                this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }),
+                this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 100000 }),
                 this.page.click('button[type="submit"]')
             ]);
 
@@ -104,6 +105,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
     }
 
     async getSeasonPBs(athleteId: string): Promise<IPB[]> {
+        console.log(`Obteniendo mejores registros de la temporada para el atleta ID: ${athleteId}`);
         try {
 
             const url = `${this.baseUrl}/atleta/${athleteId}`;
@@ -163,7 +165,8 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                             const recordYear = parseInt(date.split(' ')[2] || '0');
                             const currentYear = new Date().getFullYear();
 
-                            if(measurement && (!best.record.measurement || isTimeImprovement(measurement, best.record.measurement)) && recordYear === currentYear) {
+                            if (recordYear !== currentYear) break;
+                            if(measurement && (!best.record.measurement || isTimeImprovement(measurement, best.record.measurement))) {
                                 best.record.measurement = measurement;
                                 best.record.wind = wind;
                                 best.date = date;
@@ -188,6 +191,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
     }
 
     async getPersonalPBs(athleteId: string): Promise<IPB[]> {
+        console.log(`Obteniendo mejores registros personales para el atleta ID: ${athleteId}`);
         try {
 
             const url = `${this.baseUrl}/atleta/${athleteId}`;

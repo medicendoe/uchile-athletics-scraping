@@ -1,0 +1,221 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { loadScrapingData, getAllEvents, formatTime, formatWind, formatDate, compareMeasurements } from '../../utils/dataUtils';
+
+const data = loadScrapingData();
+const athletes = data.data.athletes;
+const allEvents = getAllEvents(athletes);
+
+// Crear rankings de temporada por evento
+const createSeasonRanking = (eventName: string) => {
+    const records: Array<{
+        athlete: string;
+        athleteId: string;
+        measurement: string;
+        wind: string;
+        date: string;
+    }> = [];
+
+    athletes.forEach(athlete => {
+        // Solo marcas de temporada para "temporada actual"
+        athlete.seasonalBests
+            .filter(sb => sb.event === eventName)
+            .forEach(sb => {
+                records.push({
+                    athlete: athlete.name,
+                    athleteId: athlete.UpslatId,
+                    measurement: sb.record.measurement,
+                    wind: sb.record.wind,
+                    date: sb.date
+                });
+            });
+    });
+
+    // Determinar si es evento de tiempo o distancia
+    const isTimeEvent = !eventName.includes('Lanzamiento') && !eventName.includes('Salto');
+    
+    records.sort((a, b) => compareMeasurements(a.measurement, b.measurement, isTimeEvent));
+    
+    return records;
+};
+---
+
+<Layout title="Mejores Marcas de la Temporada - Atletismo Stats">
+    <div class="page-title">📅 Mejores Marcas de la Temporada</div>
+    <p class="page-description">
+        Rankings actuales de las mejores marcas de la temporada por evento.
+    </p>
+
+    <div class="nav-buttons">
+        <a href={import.meta.env.BASE_URL} class="nav-link">← Inicio</a>
+        <a href={`${import.meta.env.BASE_URL}rankings/all-time`} class="nav-link">Todos los Tiempos</a>
+        <a href={`${import.meta.env.BASE_URL}athletes`} class="nav-link">Atletas</a>
+    </div>
+
+    {allEvents.map(event => {
+        const ranking = createSeasonRanking(event);
+        return ranking.length > 0 && (
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">{event}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table class="ranking-table">
+                            <thead>
+                                <tr>
+                                    <th>Pos</th>
+                                    <th>Atleta</th>
+                                    <th>Marca</th>
+                                    <th>Viento</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {ranking.map((record, index) => (
+                                    <tr class={index < 3 ? `podium-${index + 1}` : ''}>
+                                        <td class="position">
+                                            {index === 0 && '🥇'}
+                                            {index === 1 && '🥈'}
+                                            {index === 2 && '🥉'}
+                                            {index > 2 && (index + 1)}
+                                        </td>
+                                        <td class="athlete">
+                                            <a href={`${import.meta.env.BASE_URL}athletes/${record.athleteId}`}>
+                                                {record.athlete}
+                                            </a>
+                                        </td>
+                                        <td class="measurement">{formatTime(record.measurement)}</td>
+                                        <td class="wind">{formatWind(record.wind) || '-'}</td>
+                                        <td class="date">{formatDate(record.date)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        );
+    })}
+
+    {allEvents.every(event => createSeasonRanking(event).length === 0) && (
+        <div class="card">
+            <div class="card-body">
+                <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                    No hay marcas de temporada registradas aún.
+                </p>
+            </div>
+        </div>
+    )}
+</Layout>
+
+<style>
+    .nav-buttons {
+        display: flex;
+        gap: 1rem;
+        margin: 1.5rem 0;
+        flex-wrap: wrap;
+    }
+
+    .nav-link {
+        padding: 0.5rem 1rem;
+        background: var(--card-background);
+        color: var(--text-color);
+        text-decoration: none;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+    }
+
+    .nav-link:hover {
+        background: var(--secondary-color);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .table-container {
+        overflow-x: auto;
+        margin: -1rem;
+        padding: 1rem;
+    }
+
+    .ranking-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 600px;
+    }
+
+    .ranking-table th {
+        text-align: left;
+        padding: 0.75rem;
+        font-weight: 600;
+        border-bottom: 2px solid var(--border-color);
+        background: var(--background-color);
+    }
+
+    .ranking-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .ranking-table tr:hover {
+        background: var(--background-color);
+    }
+
+    .position {
+        text-align: center;
+        font-weight: bold;
+        width: 60px;
+    }
+
+    .athlete a {
+        color: var(--secondary-color);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .athlete a:hover {
+        text-decoration: underline;
+    }
+
+    .measurement {
+        font-weight: 600;
+        color: var(--secondary-color);
+    }
+
+    .wind, .date {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .podium-1 {
+        background: linear-gradient(90deg, rgba(255, 215, 0, 0.1), transparent);
+    }
+
+    .podium-2 {
+        background: linear-gradient(90deg, rgba(192, 192, 192, 0.1), transparent);
+    }
+
+    .podium-3 {
+        background: linear-gradient(90deg, rgba(205, 127, 50, 0.1), transparent);
+    }
+
+    @media (max-width: 768px) {
+        .nav-buttons {
+            flex-direction: column;
+        }
+        
+        .nav-link {
+            text-align: center;
+        }
+        
+        .ranking-table {
+            font-size: 0.9rem;
+        }
+        
+        .ranking-table th,
+        .ranking-table td {
+            padding: 0.5rem;
+        }
+    }
+</style>

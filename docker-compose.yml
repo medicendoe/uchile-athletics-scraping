@@ -6,33 +6,37 @@ services:
       dockerfile: Dockerfile
     container_name: atletismo-scraper
     volumes:
-      # Montar código fuente para desarrollo (opcional)
       - ./scraper/src:/app/src
-      # Volumen para datos/resultados compartido
       - ./data:/app/data
-    environment:
-      - NODE_ENV=production
-      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-      - UPSLAT_USERNAME=gabriel.egallardor@gmail.com
-      - UPSLAT_PASSWORD=5yS%4K&g**aVM47bp2DfmuY8sL!7x3oM
-      - ATHLETES=Domingo Ruiz Tala,Gabriel Gallardo Rodriguez, Irma Andrea Sheihing Histchfeld, Joaequin Sebastian Erribarren Asenjo
+    env_file:
+      - .env
     networks:
       - atletismo-network
-    # No reiniciar el contenedor - ejecutar solo una vez
     restart: "no"
-    profiles:
-      - scraper
-    # Configuración de recursos (opcional)
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 3G
         reservations:
-          memory: 512M
+          memory: 1G
+
+  # Servicio Web Astro - Generador de páginas estáticas
+  web-builder:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: atletismo-web-builder
+    volumes:
+      - ./data:/tmp/data:ro
+      - ./dist:/app/output
+    env_file:
+      - .env
+    networks:
+      - atletismo-network
+    restart: "no"
+    depends_on:
+      - scraper
 
 networks:
-  scraper-network:
+  atletismo-network:
     driver: bridge
-
-volumes:
-  scraper-data:

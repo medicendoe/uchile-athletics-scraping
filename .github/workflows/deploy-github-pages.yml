@@ -1,0 +1,111 @@
+name: Deploy to GitHub Pages
+
+on:
+  # Ejecutar manualmente
+  workflow_dispatch:
+  
+  # Ejecutar automáticamente cada día a las 6:00 AM UTC
+  schedule:
+    - cron: '0 6 * * *'
+  
+  # Ejecutar en push a main
+  push:
+    branches:
+      - main
+
+# Permisos necesarios para GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Solo permitir un deployment a la vez
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  scrape-and-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install scraper dependencies
+        working-directory: ./scraper
+        run: npm install
+        
+      - name: Install web dependencies
+        working-directory: ./web
+        run: npm install
+        
+      - name: Build scraper
+        working-directory: ./scraper
+        run: npm run build
+        
+      - name: Create data directory
+        run: mkdir -p data
+        
+      - name: Run scraper
+        working-directory: ./scraper
+        run: npm start
+        env:
+          # Variables de entorno para el scraper
+          NODE_ENV: production
+          UPSLAT_USERNAME: ${{ secrets.UPSLAT_USERNAME }}
+          UPSLAT_PASSWORD: ${{ secrets.UPSLAT_PASSWORD }}
+          ATHLETES: ${{ secrets.ATHLETES }}
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: false
+          
+      - name: Verify scraped data
+        run: |
+          echo "Checking scraped data..."
+          ls -la data/ || echo "No data directory found"
+          
+      - name: Copy scraped data to web project
+        run: |
+          # Crear directorio de datos en web si no existe
+          mkdir -p web/src/data
+          
+          # Copiar los datos del scraper al directorio de datos del proyecto web
+          if [ -d "data" ] && [ "$(ls -A data)" ]; then
+            cp -r data/* web/src/data/ || true
+            echo "Data copied successfully"
+          else
+            echo "No data to copy or data directory is empty"
+          fi
+          
+      - name: Build Astro site
+        working-directory: ./web
+        run: npm run build
+        
+      - name: Add .nojekyll file for GitHub Pages
+        run: |
+          touch web/dist/.nojekyll
+          echo "Created .nojekyll file for GitHub Pages"
+        
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './web/dist'
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: scrape-and-build
+    
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
