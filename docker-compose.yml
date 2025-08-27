@@ -5,6 +5,7 @@ services:
       context: ./scraper
       dockerfile: Dockerfile
     container_name: atletismo-scraper
+    user: "1000:1000"  # Usuario para evitar problemas de permisos
     volumes:
       - ./scraper/src:/app/src
       - ./data:/app/data
