@@ -44,9 +44,9 @@ jobs:
           
       - name: Create .env file
         run: |
-          echo "UPSLAT_USERNAME=${{ UPSLAT_USERNAME }}" > .env
-          echo "UPSLAT_PASSWORD=${{ UPSLAT_PASSWORD }}" >> .env
-          echo "ATHLETES=${{ ATHLETES }}" >> .env
+          echo "UPSLAT_USERNAME=${ UPSLAT_USERNAME }" > .env
+          echo "UPSLAT_PASSWORD=${ UPSLAT_PASSWORD }" >> .env
+          echo "ATHLETES=${ ATHLETES }" >> .env
           echo "NODE_ENV=production" >> .env
           
       - name: Build and run scraper container
