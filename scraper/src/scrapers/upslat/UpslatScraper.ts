@@ -9,10 +9,14 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
     protected input: IUpslatInput;
     protected page!: Page;
     protected baseUrl: string = 'https://atletismo.usplat.cl';
+    private maxRetries: number;
+    private retryDelay: number;
 
     constructor(input: IUpslatInput) {
         super();
         this.input = input;
+        this.maxRetries = input.maxRetries || 3;
+        this.retryDelay = input.retryDelay || 2000;
         this.data = {
             url: this.baseUrl,
             timestamp: new Date().toISOString(),
@@ -24,15 +28,72 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
         }
     }
 
+    /**
+     * Método helper para reintentar operaciones que pueden fallar por timeout
+     */
+    private async retryOperation<T>(operation: () => Promise<T>, operationName: string): Promise<T> {
+        let lastError: Error;
+        
+        for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+            try {
+                console.log(`${operationName} - Intento ${attempt}/${this.maxRetries}`);
+                return await operation();
+            } catch (error) {
+                lastError = error as Error;
+                const errorMessage = lastError.message.toLowerCase();
+                
+                // Log más detallado dependiendo del tipo de error
+                if (errorMessage.includes('timeout') || errorMessage.includes('navigation')) {
+                    console.warn(`${operationName} - Timeout en intento ${attempt}:`, lastError.message);
+                } else if (errorMessage.includes('net::err')) {
+                    console.warn(`${operationName} - Error de red en intento ${attempt}:`, lastError.message);
+                } else {
+                    console.warn(`${operationName} - Error en intento ${attempt}:`, lastError.message);
+                }
+                
+                if (attempt < this.maxRetries) {
+                    const waitTime = this.retryDelay * attempt; // Incrementar el delay con cada intento
+                    console.log(`Esperando ${waitTime}ms antes del siguiente intento...`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                } else {
+                    console.error(`${operationName} - Todos los intentos (${this.maxRetries}) han fallado`);
+                }
+            }
+        }
+        
+        throw lastError!;
+    }
+
+    /**
+     * Verifica si la página actual es válida y no ha perdido la sesión
+     */
+    private async checkPageStatus(): Promise<boolean> {
+        try {
+            const currentUrl = this.page.url();
+            if (currentUrl.includes('login')) {
+                console.warn('La sesión se ha perdido, es necesario hacer login nuevamente');
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.warn('Error al verificar el estado de la página:', error);
+            return false;
+        }
+    }
+
     async login(email: string, password: string): Promise<void> {
         
         console.log('Iniciando sesión en Upslat...');
         const page = await this.browser.newPage();
+        
         try {
             await page.setViewport({ width: 1920, height: 1080 });
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
         
-            await page.goto(`${this.baseUrl}/login`, { waitUntil: 'networkidle2' });
+            // Navegar a la página de login con reintentos
+            await this.retryOperation(async () => {
+                await page.goto(`${this.baseUrl}/login`, { waitUntil: 'networkidle2', timeout: 30000 });
+            }, 'Navegación a página de login');
             
             await page.waitForSelector('input[name="email"]');
             await page.waitForSelector('input[name="password"]');
@@ -40,10 +101,13 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
             await page.type('input[name="email"]', email, { delay: 100 });
             await page.type('input[name="password"]', password, { delay: 100 });
 
-            await Promise.all([
-                page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }),
-                page.click('button[type="submit"]')
-            ]);
+            // Enviar formulario de login con reintentos
+            await this.retryOperation(async () => {
+                await Promise.all([
+                    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
+                    page.click('button[type="submit"]')
+                ]);
+            }, 'Envío de formulario de login');
 
             const currentUrl = page.url();
             if (currentUrl.includes('login')) {
@@ -68,16 +132,22 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
         console.log(`Buscando atleta: ${name}`);
 
         try {
-            await this.page.goto(`${this.baseUrl}`, { waitUntil: 'networkidle2' });
+            // Navegar a la página principal con reintentos
+            await this.retryOperation(async () => {
+                await this.page.goto(`${this.baseUrl}`, { waitUntil: 'networkidle2', timeout: 30000 });
+            }, `Navegación a página principal para buscar ${name}`);
 
             await this.page.waitForSelector('input[name="s"]');
 
             await this.page.type('input[name="s"]', name, { delay: 100 });
 
-            await Promise.all([
-                this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 100000 }),
-                this.page.click('button[type="submit"]')
-            ]);
+            // Enviar búsqueda con reintentos
+            await this.retryOperation(async () => {
+                await Promise.all([
+                    this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
+                    this.page.click('button[type="submit"]')
+                ]);
+            }, `Búsqueda de atleta ${name}`);
 
             await this.page.waitForSelector('.list-group a');
             
@@ -110,7 +180,10 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
 
             const url = `${this.baseUrl}/atleta/${athleteId}`;
 
-            await this.page.goto(url, { waitUntil: 'networkidle2' });
+            // Navegar a la página del atleta con reintentos
+            await this.retryOperation(async () => {
+                await this.page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+            }, `Navegación a página del atleta ${athleteId} para registros de temporada`);
 
             const seasonData = await this.page.evaluate(() => {
 
@@ -196,7 +269,10 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
 
             const url = `${this.baseUrl}/atleta/${athleteId}`;
 
-            await this.page.goto(url, { waitUntil: 'networkidle2' });
+            // Navegar a la página del atleta con reintentos
+            await this.retryOperation(async () => {
+                await this.page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+            }, `Navegación a página del atleta ${athleteId} para registros personales`);
 
             const personalData = await this.page.evaluate(() => {
 
