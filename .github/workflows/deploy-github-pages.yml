@@ -33,11 +33,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      - name: Create required directories
-        run: |
-          mkdir -p data
-          mkdir -p dist
-          
       - name: Create .env file
         run: |
           echo "UPSLAT_USERNAME=${{vars.UPSLAT_USERNAME}}" > .env
@@ -45,17 +40,13 @@ jobs:
           echo "ATHLETES=${{vars.ATHLETES}}" >> .env
           echo "NODE_ENV=production" >> .env
           
-      - name: Build and run scraper container
+      - name: Build and run scraper with Docker Compose
         run: |
-          # Construir el contenedor del scraper
-          docker build -t atletismo-scraper ./scraper
+          # Ejecutar solo el servicio scraper
+          docker compose up --build scraper --abort-on-container-exit
           
-          # Ejecutar el scraper con las variables de entorno
-          docker run --rm \
-            -v "$PWD/data:/app/data" \
-            --env-file .env \
-            --name atletismo-scraper-run \
-            atletismo-scraper
+          # Limpiar contenedores después del scraping
+          docker compose down
             
       - name: Verify scraped data
         run: |
@@ -68,18 +59,13 @@ jobs:
             echo "Warning: No scraper results found"
           fi
           
-      - name: Build and run web builder container
+      - name: Build and run web builder with Docker Compose
         run: |
-          # Construir el contenedor del generador web
-          docker build -t atletismo-web-builder ./web
+          # Ejecutar solo el servicio web-builder
+          docker compose up --build web-builder --abort-on-container-exit
           
-          # Ejecutar el generador web que copia datos y construye el sitio
-          docker run --rm \
-            -v "$PWD/data:/tmp/data:ro" \
-            -v "$PWD/dist:/app/output" \
-            --env-file .env \
-            --name atletismo-web-builder-run \
-            atletismo-web-builder
+          # Limpiar contenedores después de la construcción
+          docker compose down
         
       - name: Add .nojekyll file for GitHub Pages
         run: |
