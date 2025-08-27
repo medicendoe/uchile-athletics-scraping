@@ -1,10 +1,5 @@
 name: Deploy to GitHub Pages
 
-env:
-  UPSLAT_USERNAME: ${{ vars.UPSLAT_USERNAME }}
-  UPSLAT_PASSWORD: ${{ secrets.UPSLAT_PASSWORD }}
-  ATHLETES: ${{ vars.ATHLETES }}
-
 on:
   # Ejecutar manualmente
   workflow_dispatch:
@@ -31,6 +26,7 @@ concurrency:
 
 jobs:
   scrape-and-build:
+    environment: scraper
     runs-on: ubuntu-latest
 
     steps:
@@ -44,9 +40,9 @@ jobs:
           
       - name: Create .env file
         run: |
-          echo "UPSLAT_USERNAME=$UPSLAT_USERNAME" > .env
-          echo "UPSLAT_PASSWORD=$UPSLAT_PASSWORD" >> .env
-          echo "ATHLETES=$ATHLETES" >> .env
+          echo "UPSLAT_USERNAME=${{UPSLAT_USERNAME}}" > .env
+          echo "UPSLAT_PASSWORD=${{UPSLAT_PASSWORD}}" >> .env
+          echo "ATHLETES=${{ATHLETES}}" >> .env
           echo "NODE_ENV=production" >> .env
           
       - name: Build and run scraper container
