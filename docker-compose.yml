@@ -8,36 +8,34 @@ services:
     volumes:
       - ./scraper/src:/app/src
       - ./data:/app/data
-    environment:
-      - NODE_ENV=production
-      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-      - UPSLAT_USERNAME=gabriel.egallardor@gmail.com
-      - UPSLAT_PASSWORD=5yS%4K&g**aVM47bp2DfmuY8sL!7x3oM
-      - ATHLETES=Domingo Ruiz Tala,Gabriel Gallardo Rodriguez, Irma Andrea Sheihing Histchfeld, Joaequin Sebastian Erribarren Asenjo
+    env_file:
+      - .env
     networks:
       - atletismo-network
     restart: "no"
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 3G
         reservations:
-          memory: 512M
+          memory: 1G
 
-  # Servicio Web Astro - Constructor
+  # Servicio Web Astro - Generador de páginas estáticas
   web-builder:
     build:
       context: ./web
       dockerfile: Dockerfile
     container_name: atletismo-web-builder
     volumes:
-      - ./data:/app/data:ro
+      - ./data:/tmp/data:ro
       - ./dist:/app/output
-    environment:
-      - NODE_ENV=production
+    env_file:
+      - .env
     networks:
       - atletismo-network
     restart: "no"
+    depends_on:
+      - scraper
 
 networks:
   atletismo-network:

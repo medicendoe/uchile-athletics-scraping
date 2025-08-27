@@ -1,9 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { loadScrapingData, getAthleteStats, getAllEvents } from '../utils/dataUtils';
+import { loadScrapingData, getAllEvents } from '../utils/dataUtils';
 
 const data = loadScrapingData();
-const athletes = data.data;
+const athletes = data.data.athletes;
 const totalAthletes = athletes.length;
 const allEvents = getAllEvents(athletes);
 const totalEvents = allEvents.length;
@@ -23,49 +23,145 @@ const lastUpdate = new Date(data.timestamp).toLocaleDateString('es-ES', {
 ---
 
 <Layout title="Atletismo Stats - Estadísticas de Atletismo">
+    <p class="page-description">
+        Sistema de estadísticas de atletismo - Universidad de Chile
+    </p>
 
-	<div class="card">
-		<div class="card-header">
-			<h2 class="card-title">🏆 Marcas Personales</h2>
-			<p class="card-subtitle">Mejores marcas históricas</p>
-		</div>
-		<div class="card-body">
-			{sortedPBs.length > 0 ? (
-				<div style="overflow-x: auto;">
-					<table style="width: 100%; border-collapse: collapse;">
-						<thead>
-							<tr style="border-bottom: 2px solid var(--border-color);">
-								<th style="text-align: left; padding: 0.75rem; font-weight: 600;">Evento</th>
-								<th style="text-align: left; padding: 0.75rem; font-weight: 600;">Marca</th>
-								<th style="text-align: left; padding: 0.75rem; font-weight: 600;">Viento</th>
-								<th style="text-align: left; padding: 0.75rem; font-weight: 600;">Fecha</th>
-							</tr>
-						</thead>
-						<tbody>
-							{sortedPBs.map((pb, index) => (
-								<tr style={`border-bottom: 1px solid var(--border-color); ${index % 2 === 0 ? 'background: var(--background-color);' : ''}`}>
-									<td style="padding: 0.75rem; font-weight: 500;">
-										{pb.event}
-									</td>
-									<td style="padding: 0.75rem; font-weight: 600; color: var(--primary-color);">
-										{formatTime(pb.record.measurement)}
-									</td>
-									<td style="padding: 0.75rem; color: var(--text-secondary);">
-										{formatWind(pb.record.wind) || '-'}
-									</td>
-									<td style="padding: 0.75rem; color: var(--text-secondary);">
-										{formatDate(pb.date)}
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			) : (
-				<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">
-					No hay marcas personales registradas.
-				</p>
-			)}
-		</div>
-	</div>
+    <!-- Navegación principal -->
+    <div class="main-nav">
+        <a href={`${import.meta.env.BASE_URL}rankings/all-time`} class="nav-button nav-button-primary">
+            <div class="nav-button-icon">🏆</div>
+            <div class="nav-button-content">
+                <h3>Mejores Marcas de Todos los Tiempos</h3>
+                <p>Rankings históricos por evento</p>
+            </div>
+        </a>
+
+        <a href={`${import.meta.env.BASE_URL}rankings/season`} class="nav-button nav-button-secondary">
+            <div class="nav-button-icon">📅</div>
+            <div class="nav-button-content">
+                <h3>Mejores Marcas de la Temporada</h3>
+                <p>Rankings de la temporada actual</p>
+            </div>
+        </a>
+
+        <a href={`${import.meta.env.BASE_URL}athletes`} class="nav-button nav-button-tertiary">
+            <div class="nav-button-icon">👥</div>
+            <div class="nav-button-content">
+                <h3>Lista de Atletas</h3>
+                <p>Todos los atletas registrados</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="last-update">
+        <small>Última actualización: {lastUpdate}</small>
+    </div>
 </Layout>
+
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 2rem 0;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+        color: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+
+    .main-nav {
+        display: grid;
+        gap: 1.5rem;
+        margin: 3rem 0;
+    }
+
+    .nav-button {
+        display: flex;
+        align-items: center;
+        padding: 2rem;
+        border-radius: 16px;
+        text-decoration: none;
+        color: white;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .nav-button-primary {
+        background: linear-gradient(135deg, #FF6B6B, #FF8E8E);
+    }
+
+    .nav-button-secondary {
+        background: linear-gradient(135deg, #4ECDC4, #44A08D);
+    }
+
+    .nav-button-tertiary {
+        background: linear-gradient(135deg, #45B7D1, #96CEB4);
+    }
+
+    .nav-button-icon {
+        font-size: 3rem;
+        margin-right: 1.5rem;
+        min-width: 4rem;
+    }
+
+    .nav-button-content h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.3rem;
+        font-weight: 600;
+    }
+
+    .nav-button-content p {
+        margin: 0;
+        opacity: 0.9;
+        font-size: 0.95rem;
+    }
+
+    .last-update {
+        text-align: center;
+        margin-top: 3rem;
+        color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+        .nav-button {
+            padding: 1.5rem;
+        }
+        
+        .nav-button-icon {
+            font-size: 2.5rem;
+            margin-right: 1rem;
+            min-width: 3rem;
+        }
+        
+        .nav-button-content h3 {
+            font-size: 1.1rem;
+        }
+        
+        .nav-button-content p {
+            font-size: 0.85rem;
+        }
+    }
+</style>

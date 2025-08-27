@@ -5,10 +5,10 @@
   "description": "Páginas estáticas generadas automáticamente con datos de atletismo",
   "scripts": {
     "dev": "astro dev",
-    "build": "npm run sync-data && astro build",
+    "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "sync-data": "node scripts/copy-data.js",
+    "sync-data": "echo 'Datos sincronizados por Docker'",
     "deploy": "npm run build && echo 'Sitio listo para desplegar en dist/'"
   },
   "dependencies": {

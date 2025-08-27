@@ -1,4 +1,4 @@
-import type { IPB, IPBScrapeResult, IScrapeResult, AthleteStats } from '../types';
+import type { IPB, IAthletePB, IPBScrapeResult, IScrapeResult, AthleteStats, IRankedPB } from '../types';
 import upslatData from '../data/upslat-scrape-results.json';
 
 /**
@@ -7,14 +7,34 @@ import upslatData from '../data/upslat-scrape-results.json';
 export function loadScrapingData(): IScrapeResult {
     try {
         // Usar import estático para mejor compatibilidad con Astro
-        return upslatData as IScrapeResult;
+        const data = upslatData as IScrapeResult;
+        
+        // Validar que los datos tienen la estructura correcta
+        if (!data || !data.data || !data.data.athletes || !Array.isArray(data.data.athletes)) {
+            console.warn('Datos inválidos, usando estructura vacía');
+            return {
+                url: 'https://atletismo.usplat.cl',
+                timestamp: new Date().toISOString(),
+                data: {
+                    athletes: [],
+                    seasonalBests: [],
+                    allTimeBests: []
+                }
+            };
+        }
+        
+        return data;
     } catch (error) {
         console.error('Error cargando datos:', error);
         // Retornar estructura vacía pero válida
         return {
             url: 'https://atletismo.usplat.cl',
             timestamp: new Date().toISOString(),
-            data: []
+            data: {
+                athletes: [],
+                seasonalBests: [],
+                allTimeBests: []
+            }
         };
     }
 }
@@ -22,7 +42,7 @@ export function loadScrapingData(): IScrapeResult {
 /**
  * Obtiene estadísticas de un atleta
  */
-export function getAthleteStats(athlete: IPBScrapeResult): AthleteStats {
+export function getAthleteStats(athlete: IAthletePB): AthleteStats {
     const events = new Set<string>();
     
     athlete.personalBests.forEach(pb => events.add(pb.event));
@@ -39,7 +59,7 @@ export function getAthleteStats(athlete: IPBScrapeResult): AthleteStats {
 /**
  * Obtiene el evento más frecuente de un atleta
  */
-function getMostFrequentEvent(athlete: IPBScrapeResult): string | undefined {
+function getMostFrequentEvent(athlete: IAthletePB): string | undefined {
     const eventCount = new Map<string, number>();
     
     [...athlete.personalBests, ...athlete.seasonalBests].forEach(record => {
@@ -122,7 +142,7 @@ export function formatDate(dateStr: string): string {
 /**
  * Obtiene todos los eventos únicos
  */
-export function getAllEvents(athletes: IPBScrapeResult[]): string[] {
+export function getAllEvents(athletes: IAthletePB[]): string[] {
     const events = new Set<string>();
     
     athletes.forEach(athlete => {
@@ -136,7 +156,7 @@ export function getAllEvents(athletes: IPBScrapeResult[]): string[] {
 /**
  * Filtra atletas por evento
  */
-export function getAthletesByEvent(athletes: IPBScrapeResult[], event: string): IPBScrapeResult[] {
+export function getAthletesByEvent(athletes: IAthletePB[], event: string): IAthletePB[] {
     return athletes.filter(athlete => 
         athlete.personalBests.some(pb => pb.event === event) ||
         athlete.seasonalBests.some(sb => sb.event === event)
@@ -166,4 +186,47 @@ export function compareMeasurements(measurement1: string, measurement2: string, 
     
     // Para tiempos, menor es mejor; para distancias, mayor es mejor
     return isTime ? value1 - value2 : value2 - value1;
+}
+
+/**
+ * Obtiene todos los eventos únicos de los rankings
+ */
+export function getAllEventsFromRankings(seasonalBests: IRankedPB[], allTimeBests: IRankedPB[]): string[] {
+    const events = new Set<string>();
+    
+    seasonalBests.forEach(ranking => events.add(ranking.event));
+    allTimeBests.forEach(ranking => events.add(ranking.event));
+    
+    return Array.from(events).sort();
+}
+
+/**
+ * Obtiene el mejor ranking para un evento específico
+ */
+export function getRankingByEvent(rankings: IRankedPB[], event: string): IRankedPB | undefined {
+    return rankings.find(ranking => ranking.event === event);
+}
+
+/**
+ * Obtiene todos los atletas únicos de los datos
+ */
+export function getAllUniqueAthletes(athletes: IAthletePB[]): string[] {
+    return athletes.map(athlete => athlete.name).sort();
+}
+
+/**
+ * Busca un atleta por ID de Usplat
+ */
+export function getAthleteById(athletes: IAthletePB[], upslatId: string): IAthletePB | undefined {
+    return athletes.find(athlete => athlete.UpslatId === upslatId);
+}
+
+/**
+ * Busca atletas por nombre (búsqueda parcial)
+ */
+export function searchAthletesByName(athletes: IAthletePB[], searchTerm: string): IAthletePB[] {
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return athletes.filter(athlete => 
+        athlete.name.toLowerCase().includes(lowerSearchTerm)
+    );
 }

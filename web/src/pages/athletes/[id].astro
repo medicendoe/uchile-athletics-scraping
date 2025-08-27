@@ -4,7 +4,7 @@ import { loadScrapingData, getAthleteStats, formatTime, formatWind, formatDate }
 
 export async function getStaticPaths() {
     const data = loadScrapingData();
-    return data.data.map(athlete => ({
+    return data.data.athletes.map(athlete => ({
         params: { id: athlete.UpslatId },
         props: { athlete }
     }));
@@ -19,115 +19,50 @@ const sortedSeasonalBests = [...athlete.seasonalBests].sort((a, b) => a.event.lo
 ---
 
 <Layout title={`${athlete.name} - Atletismo Stats`}>
-    <div style="margin-bottom: 2rem;">
-        <a href="/athletes" style="color: var(--primary-color); text-decoration: none;">← Volver a Atletas</a>
+    <div class="nav-buttons">
+        <a href={`${import.meta.env.BASE_URL}athletes`} class="nav-link">← Atletas</a>
+        <a href={import.meta.env.BASE_URL} class="nav-link">Inicio</a>
+        <a href={`${import.meta.env.BASE_URL}rankings/all-time`} class="nav-link">Todos los Tiempos</a>
+        <a href={`${import.meta.env.BASE_URL}rankings/season`} class="nav-link">Temporada</a>
     </div>
 
-    <div class="page-title">{athlete.name}</div>
-    <p class="page-description">
-        ID: {athlete.UpslatId} • {stats.events.length} eventos • {stats.totalPBs + stats.totalSeasonalBests} marcas totales
-    </p>
-
-    <!-- Estadísticas del atleta -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-number">{stats.totalPBs}</div>
-            <div class="stat-label">Marcas Personales</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">{stats.totalSeasonalBests}</div>
-            <div class="stat-label">Mejores de Temporada 2025</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">{stats.events.length}</div>
-            <div class="stat-label">Eventos</div>
-        </div>
-        <div class="stat-card">
-            <div style="font-size: 1.2rem; font-weight: bold; color: var(--primary-color);">
-                {stats.bestEvent || 'N/A'}
-            </div>
-            <div class="stat-label">Evento Principal</div>
-        </div>
+    <div class="athlete-header">
+        <h1 class="athlete-name">{athlete.name}</h1>
+        <p class="athlete-details">
+            ID: {athlete.UpslatId}
+        </p>
     </div>
 
-    <div class="grid grid-cols-1" style="margin-top: 2rem;">
-        <!-- Marcas Personales -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">🏆 Marcas Personales</h2>
-                <p class="card-subtitle">Mejores marcas históricas</p>
-            </div>
-            <div class="card-body">
-                {sortedPBs.length > 0 ? (
-                    <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="border-bottom: 2px solid var(--border-color);">
-                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Evento</th>
-                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Marca</th>
-                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Viento</th>
-                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Fecha</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sortedPBs.map((pb, index) => (
-                                    <tr style={`border-bottom: 1px solid var(--border-color); ${index % 2 === 0 ? 'background: var(--background-color);' : ''}`}>
-                                        <td style="padding: 0.75rem; font-weight: 500;">
-                                            {pb.event}
-                                        </td>
-                                        <td style="padding: 0.75rem; font-weight: 600; color: var(--primary-color);">
-                                            {formatTime(pb.record.measurement)}
-                                        </td>
-                                        <td style="padding: 0.75rem; color: var(--text-secondary);">
-                                            {formatWind(pb.record.wind) || '-'}
-                                        </td>
-                                        <td style="padding: 0.75rem; color: var(--text-secondary);">
-                                            {formatDate(pb.date)}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">
-                        No hay marcas personales registradas.
-                    </p>
-                )}
-            </div>
-        </div>
-
+    <div class="records-container">
         <!-- Mejores de Temporada -->
-        <div class="card" style="margin-top: 2rem;">
+        <div class="card">
             <div class="card-header">
                 <h2 class="card-title">🏃‍♂️ Mejores de Temporada 2025</h2>
                 <p class="card-subtitle">Mejores marcas de la temporada actual</p>
             </div>
             <div class="card-body">
                 {sortedSeasonalBests.length > 0 ? (
-                    <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse;">
+                    <div class="table-container">
+                        <table class="records-table">
                             <thead>
-                                <tr style="border-bottom: 2px solid var(--border-color);">
-                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Evento</th>
-                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Marca</th>
-                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Viento</th>
-                                    <th style="text-align: left; padding: 0.75rem; font-weight: 600;">Fecha</th>
+                                <tr>
+                                    <th>Evento</th>
+                                    <th>Marca</th>
+                                    <th>Viento</th>
+                                    <th>Fecha</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {sortedSeasonalBests.map((sb, index) => (
-                                    <tr style={`border-bottom: 1px solid var(--border-color); ${index % 2 === 0 ? 'background: var(--background-color);' : ''}`}>
-                                        <td style="padding: 0.75rem; font-weight: 500;">
-                                            {sb.event}
-                                        </td>
-                                        <td style="padding: 0.75rem; font-weight: 600; color: var(--accent-color);">
+                                    <tr class={index % 2 === 0 ? 'even' : 'odd'}>
+                                        <td class="event-cell">{sb.event}</td>
+                                        <td class="measurement-cell seasonal-best">
                                             {formatTime(sb.record.measurement)}
                                         </td>
-                                        <td style="padding: 0.75rem; color: var(--text-secondary);">
+                                        <td class="wind-cell">
                                             {formatWind(sb.record.wind) || '-'}
                                         </td>
-                                        <td style="padding: 0.75rem; color: var(--text-secondary);">
+                                        <td class="date-cell">
                                             {formatDate(sb.date)}
                                         </td>
                                     </tr>
@@ -136,11 +71,225 @@ const sortedSeasonalBests = [...athlete.seasonalBests].sort((a, b) => a.event.lo
                         </table>
                     </div>
                 ) : (
-                    <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">
+                    <p class="no-data">
                         No hay mejores marcas de temporada registradas.
+                    </p>
+                )}
+            </div>
+        </div>
+        <!-- Marcas Personales -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🏆 Marcas Personales</h2>
+                <p class="card-subtitle">Mejores marcas históricas</p>
+            </div>
+            <div class="card-body">
+                {sortedPBs.length > 0 ? (
+                    <div class="table-container">
+                        <table class="records-table">
+                            <thead>
+                                <tr>
+                                    <th>Evento</th>
+                                    <th>Marca</th>
+                                    <th>Viento</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sortedPBs.map((pb, index) => (
+                                    <tr class={index % 2 === 0 ? 'even' : 'odd'}>
+                                        <td class="event-cell">{pb.event}</td>
+                                        <td class="measurement-cell personal-best">
+                                            {formatTime(pb.record.measurement)}
+                                        </td>
+                                        <td class="wind-cell">
+                                            {formatWind(pb.record.wind) || '-'}
+                                        </td>
+                                        <td class="date-cell">
+                                            {formatDate(pb.date)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <p class="no-data">
+                        No hay marcas personales registradas.
                     </p>
                 )}
             </div>
         </div>
     </div>
 </Layout>
+
+<style>
+    .nav-buttons {
+        display: flex;
+        gap: 1rem;
+        margin: 1.5rem 0;
+        flex-wrap: wrap;
+    }
+
+    .nav-link {
+        padding: 0.5rem 1rem;
+        background: var(--card-background);
+        color: var(--text-color);
+        text-decoration: none;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+    }
+
+    .nav-link:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .athlete-header {
+        text-align: center;
+        margin: 2rem 0 3rem 0;
+    }
+
+    .athlete-name {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 0 0 0.5rem 0;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .athlete-details {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 2rem 0;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+        color: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-text {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        word-break: break-word;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+
+    .records-container {
+        display: grid;
+        gap: 2rem;
+        margin-top: 3rem;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        margin: -1rem;
+        padding: 1rem;
+    }
+
+    .records-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 600px;
+    }
+
+    .records-table th {
+        text-align: left;
+        padding: 0.75rem;
+        font-weight: 600;
+        border-bottom: 2px solid var(--border-color);
+        background: var(--background-color);
+    }
+
+    .records-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .records-table tr.even {
+        background: var(--background-color);
+    }
+
+    .records-table tr:hover {
+        background: rgba(var(--primary-color-rgb), 0.05);
+    }
+
+    .event-cell {
+        font-weight: 500;
+    }
+
+    .measurement-cell {
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    .personal-best {
+        color: var(--primary-color);
+    }
+
+    .seasonal-best {
+        color: var(--secondary-color);
+    }
+
+    .wind-cell, .date-cell {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .no-data {
+        color: var(--text-secondary);
+        text-align: center;
+        padding: 2rem;
+        font-style: italic;
+    }
+
+    @media (max-width: 768px) {
+        .nav-buttons {
+            flex-direction: column;
+        }
+
+        .athlete-name {
+            font-size: 2rem;
+        }
+
+        .records-table {
+            font-size: 0.9rem;
+        }
+
+        .records-table th,
+        .records-table td {
+            padding: 0.5rem;
+        }
+
+        .measurement-cell {
+            font-size: 1rem;
+        }
+    }
+</style>
