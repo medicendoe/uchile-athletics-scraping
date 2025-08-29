@@ -40,6 +40,12 @@ jobs:
           echo "ATHLETES=${{vars.ATHLETES}}" >> .env
           echo "NODE_ENV=production" >> .env
           
+      - name: Create data directory with proper permissions
+        run: |
+          mkdir -p data
+          chmod 755 data
+          ls -la data/
+          
       - name: Build and run scraper with Docker Compose
         run: |
           # Ejecutar solo el servicio scraper

@@ -27,7 +27,7 @@ RUN mkdir -p /home/pptruser/Downloads \
     && mkdir -p /app/data \
     && chown -R pptruser:pptruser /home/pptruser \
     && chown -R pptruser:pptruser /app \
-    && chown -R pptruser:pptruser /app/data
+    && chmod 755 /app/data
 
 # Cambiar a usuario pptruser antes de instalar Chrome
 USER pptruser

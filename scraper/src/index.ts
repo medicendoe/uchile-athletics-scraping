@@ -47,8 +47,13 @@ async function main() {
         console.log('Cerrando el scraper...');
         await scraper.close();
         
+        console.log('Proceso completado exitosamente.');
+        process.exit(0);
+        
     } catch (error) {
         console.error('Error en el proceso principal:', error);
+        console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
+        process.exit(1);
     } finally {
         await scraper.close();
     }

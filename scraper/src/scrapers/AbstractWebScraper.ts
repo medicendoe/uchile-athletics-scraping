@@ -58,14 +58,44 @@ export default abstract class AbstractWebScraper<T> implements IWebScraper<T> {
         }
 
         const dataDir = path.join(process.cwd(), 'data');
+        console.log(`Working directory: ${process.cwd()}`);
+        console.log(`Target data directory: ${dataDir}`);
         
         if (!fs.existsSync(dataDir)) {
+            console.log('Data directory does not exist, creating...');
             fs.mkdirSync(dataDir, { recursive: true });
+            console.log('Data directory created successfully');
+        } else {
+            console.log('Data directory already exists');
+        }
+        
+        // Verificar permisos del directorio
+        try {
+            fs.accessSync(dataDir, fs.constants.W_OK);
+            console.log('Data directory is writable');
+        } catch (error) {
+            console.error('Data directory is not writable:', error);
+            throw new Error(`Cannot write to data directory: ${dataDir}`);
         }
         
         const filepath = path.join(dataDir, filename);
-        fs.writeFileSync(filepath, JSON.stringify(this.data, null, 2));
-        console.log(`Resultados guardados en: ${filepath}`);
+        console.log(`Attempting to write file: ${filepath}`);
+        
+        try {
+            fs.writeFileSync(filepath, JSON.stringify(this.data, null, 2));
+            console.log(`Resultados guardados en: ${filepath}`);
+            
+            // Verificar que el archivo se creó correctamente
+            if (fs.existsSync(filepath)) {
+                const stats = fs.statSync(filepath);
+                console.log(`File created successfully, size: ${stats.size} bytes`);
+            } else {
+                throw new Error('File was not created despite no error thrown');
+            }
+        } catch (error) {
+            console.error('Error writing file:', error);
+            throw error;
+        }
     }
 
 }
