@@ -24,8 +24,16 @@ export default abstract class AbstractWebScraper<T> implements IWebScraper<T> {
                 '--disable-gpu',
                 '--disable-background-timer-throttling',
                 '--disable-backgrounding-occluded-windows',
-                '--disable-renderer-backgrounding'
-            ]
+                '--disable-renderer-backgrounding',
+                '--disable-features=TranslateUI',
+                '--disable-ipc-flooding-protection',
+                '--disable-web-security',
+                '--disable-features=VizDisplayCompositor',
+                '--aggressive-cache-discard',
+                '--memory-pressure-off'
+            ],
+            defaultViewport: null,
+            timeout: 30000
         });
         
         console.log('Navegador inicializado correctamente');

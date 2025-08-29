@@ -15,8 +15,8 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
     constructor(input: IUpslatInput) {
         super();
         this.input = input;
-        this.maxRetries = input.maxRetries || 3;
-        this.retryDelay = input.retryDelay || 2000;
+        this.maxRetries = input.maxRetries || 5;
+        this.retryDelay = input.retryDelay || 1000;
         this.data = {
             url: this.baseUrl,
             timestamp: new Date().toISOString(),
@@ -42,7 +42,6 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                 lastError = error as Error;
                 const errorMessage = lastError.message.toLowerCase();
                 
-                // Log más detallado dependiendo del tipo de error
                 if (errorMessage.includes('timeout') || errorMessage.includes('navigation')) {
                     console.warn(`${operationName} - Timeout en intento ${attempt}:`, lastError.message);
                 } else if (errorMessage.includes('net::err')) {
@@ -52,9 +51,8 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                 }
                 
                 if (attempt < this.maxRetries) {
-                    const waitTime = this.retryDelay * attempt; // Incrementar el delay con cada intento
-                    console.log(`Esperando ${waitTime}ms antes del siguiente intento...`);
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    console.log(`Esperando ${this.retryDelay}ms antes del siguiente intento...`);
+                    await new Promise(resolve => setTimeout(resolve, this.retryDelay));
                 } else {
                     console.error(`${operationName} - Todos los intentos (${this.maxRetries}) han fallado`);
                 }
@@ -89,22 +87,30 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
         try {
             await page.setViewport({ width: 1920, height: 1080 });
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+            
+            await page.setRequestInterception(true);
+            page.on('request', (req) => {
+                const resourceType = req.resourceType();
+                if(resourceType === 'image' || resourceType === 'stylesheet' || resourceType === 'font' || resourceType === 'media') {
+                    req.abort();
+                } else {
+                    req.continue();
+                }
+            });
         
-            // Navegar a la página de login con reintentos
             await this.retryOperation(async () => {
-                await page.goto(`${this.baseUrl}/login`, { waitUntil: 'networkidle2', timeout: 30000 });
+                await page.goto(`${this.baseUrl}/login`, { waitUntil: 'domcontentloaded', timeout: 20000 });
             }, 'Navegación a página de login');
             
-            await page.waitForSelector('input[name="email"]');
-            await page.waitForSelector('input[name="password"]');
+            await page.waitForSelector('input[name="email"]', { timeout: 10000 });
+            await page.waitForSelector('input[name="password"]', { timeout: 10000 });
 
-            await page.type('input[name="email"]', email, { delay: 100 });
-            await page.type('input[name="password"]', password, { delay: 100 });
+            await page.type('input[name="email"]', email, { delay: 50 }); // Reducir delay de escritura
+            await page.type('input[name="password"]', password, { delay: 50 });
 
-            // Enviar formulario de login con reintentos
             await this.retryOperation(async () => {
                 await Promise.all([
-                    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
+                    page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }),
                     page.click('button[type="submit"]')
                 ]);
             }, 'Envío de formulario de login');
@@ -132,24 +138,22 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
         console.log(`Buscando atleta: ${name}`);
 
         try {
-            // Navegar a la página principal con reintentos
             await this.retryOperation(async () => {
-                await this.page.goto(`${this.baseUrl}`, { waitUntil: 'networkidle2', timeout: 30000 });
+                await this.page.goto(`${this.baseUrl}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
             }, `Navegación a página principal para buscar ${name}`);
 
-            await this.page.waitForSelector('input[name="s"]');
+            await this.page.waitForSelector('input[name="s"]', { timeout: 10000 });
 
-            await this.page.type('input[name="s"]', name, { delay: 100 });
+            await this.page.type('input[name="s"]', name, { delay: 50 }); // Reducir delay
 
-            // Enviar búsqueda con reintentos
             await this.retryOperation(async () => {
                 await Promise.all([
-                    this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
+                    this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }),
                     this.page.click('button[type="submit"]')
                 ]);
             }, `Búsqueda de atleta ${name}`);
 
-            await this.page.waitForSelector('.list-group a');
+            await this.page.waitForSelector('.list-group a', { timeout: 10000 });
             
             const firstLinkHref = await this.page.$eval('.list-group a', (element) => {
                 return element.getAttribute('href') || '';
@@ -180,9 +184,8 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
 
             const url = `${this.baseUrl}/atleta/${athleteId}`;
 
-            // Navegar a la página del atleta con reintentos
             await this.retryOperation(async () => {
-                await this.page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+                await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
             }, `Navegación a página del atleta ${athleteId} para registros de temporada`);
 
             const seasonData = await this.page.evaluate(() => {
@@ -207,7 +210,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                     return false;
                 }
 
-                let results: IPB[] = []; // Mover esta declaración aquí
+                let results: IPB[] = [];
                 const events = document.querySelectorAll('.tab-content div:nth-child(2) .panel-group');
 
                 for (let eventElement of Array.from(events)) {
@@ -252,10 +255,10 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                     }
                 }
                 
-                return results; // Agregar esta línea al final del evaluate
+                return results;
             });
 
-            return seasonData; // Cambiar de 'results' a 'seasonData'
+            return seasonData;
 
         } catch (error) {
             console.error('Error en getSeasonPBs:', error);
@@ -269,9 +272,8 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
 
             const url = `${this.baseUrl}/atleta/${athleteId}`;
 
-            // Navegar a la página del atleta con reintentos
             await this.retryOperation(async () => {
-                await this.page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+                await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
             }, `Navegación a página del atleta ${athleteId} para registros personales`);
 
             const personalData = await this.page.evaluate(() => {

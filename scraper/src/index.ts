@@ -24,7 +24,9 @@ async function main() {
     const scraper: IWebScraper = new UpslatScraper({
         username: process.env.UPSLAT_USERNAME || '',
         password: process.env.UPSLAT_PASSWORD || '',
-        athletes: process.env.ATHLETES ? process.env.ATHLETES.split(',').map(name => ({ name })) : []
+        athletes: process.env.ATHLETES ? process.env.ATHLETES.split(',').map(name => ({ name })) : [],
+        maxRetries: 15,
+        retryDelay: 3000,
     });
 
     try {
