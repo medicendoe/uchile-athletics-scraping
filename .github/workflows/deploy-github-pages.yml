@@ -43,8 +43,7 @@ jobs:
       - name: Create data directory with proper permissions
         run: |
           mkdir -p data
-          chmod 755 data
-          ls -la data/
+          mkdir -p pages
           
       - name: Build and run scraper with Docker Compose
         run: |
@@ -53,7 +52,10 @@ jobs:
           
           # Limpiar contenedores después del scraping
           docker compose down
-            
+
+          # Obtener data
+          docker compose cp scraper:/app/data ./data
+
       - name: Verify scraped data
         run: |
           echo "Checking scraped data..."
@@ -72,10 +74,13 @@ jobs:
           
           # Limpiar contenedores después de la construcción
           docker compose down
-        
+
+          # Obtener las paginas
+          docker compose cp web-builder:/app/output ./pages
+
       - name: Add .nojekyll file for GitHub Pages
         run: |
-          touch dist/.nojekyll
+          touch pages/.nojekyll
           echo "Created .nojekyll file for GitHub Pages"
           
       - name: Clean up sensitive files
@@ -89,7 +94,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: './pages'
 
   deploy:
     environment:
