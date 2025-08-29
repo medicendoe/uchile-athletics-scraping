@@ -26,7 +26,8 @@ RUN mkdir -p /home/pptruser/Downloads \
     && mkdir -p /home/pptruser/.cache/puppeteer \
     && mkdir -p /app/data \
     && chown -R pptruser:pptruser /home/pptruser \
-    && chown -R pptruser:pptruser /app
+    && chown -R pptruser:pptruser /app \
+    && chmod 777 /app/data
 
 # Cambiar a usuario pptruser antes de instalar Chrome
 USER pptruser
