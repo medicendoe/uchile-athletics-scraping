@@ -44,6 +44,9 @@ jobs:
         run: |
           mkdir -p data
           mkdir -p pages
+          # Dar permisos completos para evitar problemas con Docker
+          chmod 777 data
+          chmod 777 pages
           
       - name: Build and run scraper with Docker Compose
         run: |
@@ -52,10 +55,7 @@ jobs:
           
           # Limpiar contenedores después del scraping
           docker compose down
-
-          # Obtener data
-          docker compose cp scraper:/app/data ./data
-
+          
       - name: Verify scraped data
         run: |
           echo "Checking scraped data..."
@@ -74,9 +74,6 @@ jobs:
           
           # Limpiar contenedores después de la construcción
           docker compose down
-
-          # Obtener las paginas
-          docker compose cp web-builder:/app/output ./pages
 
       - name: Add .nojekyll file for GitHub Pages
         run: |

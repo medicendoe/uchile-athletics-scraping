@@ -7,6 +7,7 @@ services:
     container_name: atletismo-scraper
     volumes:
       - ./scraper/src:/app/src
+      - ./data:/app/data
     env_file:
       - .env
     networks:
@@ -27,6 +28,7 @@ services:
     container_name: atletismo-web-builder
     volumes:
       - ./data:/tmp/data:ro
+      - ./pages:/app/output
     env_file:
       - .env
     networks:
