@@ -200,7 +200,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                         return true;
                     }
 
-                    for (let i = Math.min(newTimeParts.length, currentBestParts.length) - 1; i >= 0; i--) {
+                    for (let i = 0; i < Math.min(newTimeParts.length, currentBestParts.length); i++) {
                         if (newTimeParts[i] < currentBestParts[i]) {
                             return true;
                         } else if (newTimeParts[i] > currentBestParts[i]) {
@@ -211,7 +211,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                 }
 
                 let results: IPB[] = [];
-                const events = document.querySelectorAll('.tab-content div:nth-child(2) .panel-group');
+                const events = document.querySelectorAll('.tab-content div:nth-child(2) .panel-group .panel-primary');
 
                 for (let eventElement of Array.from(events)) {
 
