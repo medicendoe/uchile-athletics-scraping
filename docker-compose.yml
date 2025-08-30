@@ -28,7 +28,7 @@ services:
     container_name: atletismo-web-builder
     volumes:
       - ./data:/app/data:ro
-      - ./pages:/app/output
+      - ./pages:/app/dist
     env_file:
       - .env
     networks:
