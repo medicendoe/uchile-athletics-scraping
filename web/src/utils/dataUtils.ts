@@ -1,5 +1,5 @@
 import type { IPB, IAthletePB, IPBScrapeResult, IScrapeResult, AthleteStats, IRankedPB } from '../types';
-import upslatData from '../data/upslat-scrape-results.json';
+import upslatData from '../../data/upslat-scrape-results.json';
 
 /**
  * Carga los datos del scraper desde el archivo JSON

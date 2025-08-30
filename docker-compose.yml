@@ -27,15 +27,13 @@ services:
       dockerfile: Dockerfile
     container_name: atletismo-web-builder
     volumes:
-      - ./data:/tmp/data:ro
+      - ./data:/app/data:ro
       - ./pages:/app/output
     env_file:
       - .env
     networks:
       - atletismo-network
     restart: "no"
-    depends_on:
-      - scraper
 
 networks:
   atletismo-network:
