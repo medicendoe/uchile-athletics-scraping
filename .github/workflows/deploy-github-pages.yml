@@ -38,6 +38,7 @@ jobs:
           echo "UPSLAT_USERNAME=${{vars.UPSLAT_USERNAME}}" > .env
           echo "UPSLAT_PASSWORD=${{secrets.UPSLAT_PASSWORD}}" >> .env
           echo "ATHLETES=${{vars.ATHLETES}}" >> .env
+          echo "EVENTS=${{vars.EVENTS}}" >> .env
           echo "NODE_ENV=production" >> .env
           
       - name: Create data directory with proper permissions
