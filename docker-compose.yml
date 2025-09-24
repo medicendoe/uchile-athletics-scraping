@@ -16,9 +16,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 3G
+          memory: 4G
         reservations:
-          memory: 1G
+          memory: 2G
 
   # Servicio Web Astro - Generador de páginas estáticas
   web-builder:
@@ -27,15 +27,13 @@ services:
       dockerfile: Dockerfile
     container_name: atletismo-web-builder
     volumes:
-      - ./data:/tmp/data:ro
-      - ./dist:/app/output
+      - ./data:/app/data:ro
+      - ./pages:/app/dist
     env_file:
       - .env
     networks:
       - atletismo-network
     restart: "no"
-    depends_on:
-      - scraper
 
 networks:
   atletismo-network:

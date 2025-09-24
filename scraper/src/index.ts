@@ -24,7 +24,9 @@ async function main() {
     const scraper: IWebScraper = new UpslatScraper({
         username: process.env.UPSLAT_USERNAME || '',
         password: process.env.UPSLAT_PASSWORD || '',
-        athletes: process.env.ATHLETES ? process.env.ATHLETES.split(',').map(name => ({ name })) : []
+        athletes: process.env.ATHLETES ? process.env.ATHLETES.split(',').map(name => ({ name })) : [],
+        maxRetries: 15,
+        retryDelay: 3000,
     });
 
     try {
@@ -45,8 +47,13 @@ async function main() {
         console.log('Cerrando el scraper...');
         await scraper.close();
         
+        console.log('Proceso completado exitosamente.');
+        process.exit(0);
+        
     } catch (error) {
         console.error('Error en el proceso principal:', error);
+        console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
+        process.exit(1);
     } finally {
         await scraper.close();
     }

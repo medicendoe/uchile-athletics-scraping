@@ -13,6 +13,7 @@ node_modules/
 
 # TypeScript compiled output
 dist/
+pages/
 build/
 
 # Environment variables
