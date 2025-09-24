@@ -5,41 +5,71 @@ on:
     branches: [ main ]
 
 jobs:
-  test-build:
+  scrape-and-build:
+    environment: scraper
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      - name: Create .env file
+        run: |
+          echo "UPSLAT_USERNAME=${{vars.UPSLAT_USERNAME}}" > .env
+          echo "UPSLAT_PASSWORD=${{secrets.UPSLAT_PASSWORD}}" >> .env
+          echo "ATHLETES=${{vars.ATHLETES}}" >> .env
+          echo "EVENTS=${{vars.EVENTS}}" >> .env
+          echo "NODE_ENV=production" >> .env
           
-      - name: Install scraper dependencies
-        working-directory: ./scraper
-        run: npm install
-        
-      - name: Install web dependencies
-        working-directory: ./web
-        run: npm install
-        
-      - name: Build scraper
-        working-directory: ./scraper
-        run: npm run build
-        
-      - name: Create mock data for testing
+      - name: Create data directory with proper permissions
         run: |
           mkdir -p data
-          mkdir -p web/src/data
-          echo '[]' > web/src/data/upslat-scrape-results.json
+          mkdir -p pages
+          # Dar permisos completos para evitar problemas con Docker
+          chmod 777 data
+          chmod 777 pages
           
-      - name: Test Astro build
-        working-directory: ./web
-        run: npm run build
-        
-      - name: Verify build output
+      - name: Build and run scraper with Docker Compose
         run: |
-          ls -la web/dist/
-          echo "Build completed successfully!"
+          # Ejecutar solo el servicio scraper
+          docker compose up --build scraper --abort-on-container-exit
+          
+          # Limpiar contenedores después del scraping
+          docker compose down
+          
+      - name: Verify scraped data
+        run: |
+          echo "Checking scraped data..."
+          ls -la data/ || echo "No data directory found"
+          if [ -f "data/upslat-scrape-results.json" ]; then
+            echo "Scraper data found!"
+            wc -l data/upslat-scrape-results.json
+          else
+            echo "Warning: No scraper results found"
+          fi
+          
+      - name: Build and run web builder with Docker Compose
+        run: |
+          # Ejecutar solo el servicio web-builder
+          docker compose up --build web-builder --abort-on-container-exit
+          
+          # Limpiar contenedores después de la construcción
+          docker compose down
+
+      - name: Add .nojekyll file for GitHub Pages
+        run: |
+          touch pages/.nojekyll
+          echo "Created .nojekyll file for GitHub Pages"
+          
+      - name: Clean up sensitive files
+        run: |
+          rm -f .env
+          echo "Cleaned up temporary files"
+        
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './pages'
