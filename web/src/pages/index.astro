@@ -8,6 +8,12 @@ const totalAthletes = athletes.length;
 const allEvents = getAllEvents(athletes);
 const totalEvents = allEvents.length;
 
+// Estadísticas por género
+const maleAthletes = athletes.filter(athlete => athlete.gender === 'M');
+const femaleAthletes = athletes.filter(athlete => athlete.gender === 'F');
+const totalMaleAthletes = maleAthletes.length;
+const totalFemaleAthletes = femaleAthletes.length;
+
 // Estadísticas generales
 const totalPBs = athletes.reduce((sum, athlete) => sum + athlete.personalBests.length, 0);
 const totalSeasonalBests = athletes.reduce((sum, athlete) => sum + athlete.seasonalBests.length, 0);
@@ -27,31 +33,95 @@ const lastUpdate = new Date(data.timestamp).toLocaleDateString('es-ES', {
         Sistema de estadísticas de atletismo - Universidad de Chile
     </p>
 
+    <!-- Estadísticas generales -->
+    <div class="stats-grid">
+        <div class="stat-card stat-card-total">
+            <div class="stat-number">{totalAthletes}</div>
+            <div class="stat-label">Total Atletas</div>
+        </div>
+        <div class="stat-card stat-card-men">
+            <div class="stat-number">{totalMaleAthletes}</div>
+            <div class="stat-label">♂️ Hombres</div>
+        </div>
+        <div class="stat-card stat-card-women">
+            <div class="stat-number">{totalFemaleAthletes}</div>
+            <div class="stat-label">♀️ Mujeres</div>
+        </div>
+        <div class="stat-card stat-card-events">
+            <div class="stat-number">{totalEvents}</div>
+            <div class="stat-label">Eventos</div>
+        </div>
+    </div>
+
     <!-- Navegación principal -->
     <div class="main-nav">
-        <a href={`${import.meta.env.BASE_URL}rankings/all-time`} class="nav-button nav-button-primary">
-            <div class="nav-button-icon">🏆</div>
-            <div class="nav-button-content">
-                <h3>Mejores Marcas de Todos los Tiempos</h3>
-                <p>Rankings históricos por evento</p>
-            </div>
-        </a>
+        <div class="nav-section">
+            <h2 class="section-title">🏆 Mejores Marcas de Todos los Tiempos</h2>
+            <div class="nav-grid">
+                <a href={`${import.meta.env.BASE_URL}rankings/all-time-men`} class="nav-button nav-button-men">
+                    <div class="nav-button-icon">♂️</div>
+                    <div class="nav-button-content">
+                        <h3>Hombres</h3>
+                        <p>Rankings históricos masculinos</p>
+                    </div>
+                </a>
 
-        <a href={`${import.meta.env.BASE_URL}rankings/season`} class="nav-button nav-button-secondary">
-            <div class="nav-button-icon">📅</div>
-            <div class="nav-button-content">
-                <h3>Mejores Marcas de la Temporada</h3>
-                <p>Rankings de la temporada actual</p>
-            </div>
-        </a>
+                <a href={`${import.meta.env.BASE_URL}rankings/all-time-women`} class="nav-button nav-button-women">
+                    <div class="nav-button-icon">♀️</div>
+                    <div class="nav-button-content">
+                        <h3>Mujeres</h3>
+                        <p>Rankings históricos femeninos</p>
+                    </div>
+                </a>
 
-        <a href={`${import.meta.env.BASE_URL}athletes`} class="nav-button nav-button-tertiary">
-            <div class="nav-button-icon">👥</div>
-            <div class="nav-button-content">
-                <h3>Lista de Atletas</h3>
-                <p>Todos los atletas registrados</p>
+                <a href={`${import.meta.env.BASE_URL}rankings/all-time`} class="nav-button nav-button-mixed">
+                    <div class="nav-button-icon">⚖️</div>
+                    <div class="nav-button-content">
+                        <h3>Mixto</h3>
+                        <p>Rankings históricos combinados</p>
+                    </div>
+                </a>
             </div>
-        </a>
+        </div>
+
+        <div class="nav-section">
+            <h2 class="section-title">📅 Mejores Marcas de la Temporada</h2>
+            <div class="nav-grid">
+                <a href={`${import.meta.env.BASE_URL}rankings/season-men`} class="nav-button nav-button-men">
+                    <div class="nav-button-icon">♂️</div>
+                    <div class="nav-button-content">
+                        <h3>Hombres</h3>
+                        <p>Rankings temporada masculinos</p>
+                    </div>
+                </a>
+
+                <a href={`${import.meta.env.BASE_URL}rankings/season-women`} class="nav-button nav-button-women">
+                    <div class="nav-button-icon">♀️</div>
+                    <div class="nav-button-content">
+                        <h3>Mujeres</h3>
+                        <p>Rankings temporada femeninos</p>
+                    </div>
+                </a>
+
+                <a href={`${import.meta.env.BASE_URL}rankings/season`} class="nav-button nav-button-mixed">
+                    <div class="nav-button-icon">⚖️</div>
+                    <div class="nav-button-content">
+                        <h3>Mixto</h3>
+                        <p>Rankings temporada combinados</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <a href={`${import.meta.env.BASE_URL}athletes`} class="nav-button nav-button-athletes">
+                <div class="nav-button-icon">👥</div>
+                <div class="nav-button-content">
+                    <h3>Lista de Atletas</h3>
+                    <p>Todos los atletas registrados</p>
+                </div>
+            </a>
+        </div>
     </div>
 
     <div class="last-update">
@@ -62,42 +132,84 @@ const lastUpdate = new Date(data.timestamp).toLocaleDateString('es-ES', {
 <style>
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 1rem;
-        margin: 2rem 0;
+        margin: 2rem 0 3rem 0;
     }
 
     .stat-card {
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         padding: 1.5rem;
         border-radius: 12px;
         text-align: center;
         color: white;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .stat-card-total {
+        background: linear-gradient(135deg, #10B981, #059669);
+    }
+
+    .stat-card-men {
+        background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+    }
+
+    .stat-card-women {
+        background: linear-gradient(135deg, #EC4899, #BE185D);
+    }
+
+    .stat-card-events {
+        background: linear-gradient(135deg, #F59E0B, #D97706);
     }
 
     .stat-number {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
         font-weight: bold;
         margin-bottom: 0.5rem;
     }
 
     .stat-label {
         font-size: 0.9rem;
-        opacity: 0.9;
+        opacity: 0.95;
+        font-weight: 500;
     }
 
     .main-nav {
-        display: grid;
-        gap: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 3rem;
         margin: 3rem 0;
+    }
+
+    .nav-section {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+        text-align: center;
+    }
+
+    .nav-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
     }
 
     .nav-button {
         display: flex;
         align-items: center;
-        padding: 2rem;
-        border-radius: 16px;
+        padding: 1.5rem;
+        border-radius: 12px;
         text-decoration: none;
         color: white;
         transition: all 0.3s ease;
@@ -109,34 +221,43 @@ const lastUpdate = new Date(data.timestamp).toLocaleDateString('es-ES', {
         box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     }
 
-    .nav-button-primary {
-        background: linear-gradient(135deg, #FF6B6B, #FF8E8E);
+    .nav-button-men {
+        background: linear-gradient(135deg, #3B82F6, #1D4ED8);
     }
 
-    .nav-button-secondary {
-        background: linear-gradient(135deg, #4ECDC4, #44A08D);
+    .nav-button-women {
+        background: linear-gradient(135deg, #EC4899, #BE185D);
     }
 
-    .nav-button-tertiary {
-        background: linear-gradient(135deg, #45B7D1, #96CEB4);
+    .nav-button-mixed {
+        background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+    }
+
+    .nav-button-athletes {
+        background: linear-gradient(135deg, #10B981, #059669);
+        width: 100%;
+        justify-self: center;
+        max-width: 400px;
+        margin: 0 auto;
     }
 
     .nav-button-icon {
-        font-size: 3rem;
-        margin-right: 1.5rem;
-        min-width: 4rem;
+        font-size: 2.5rem;
+        margin-right: 1rem;
+        min-width: 3rem;
+        text-align: center;
     }
 
     .nav-button-content h3 {
-        margin: 0 0 0.5rem 0;
-        font-size: 1.3rem;
+        margin: 0 0 0.3rem 0;
+        font-size: 1.1rem;
         font-weight: 600;
     }
 
     .nav-button-content p {
         margin: 0;
         opacity: 0.9;
-        font-size: 0.95rem;
+        font-size: 0.85rem;
     }
 
     .last-update {
@@ -146,22 +267,30 @@ const lastUpdate = new Date(data.timestamp).toLocaleDateString('es-ES', {
     }
 
     @media (max-width: 768px) {
+        .nav-grid {
+            grid-template-columns: 1fr;
+        }
+        
         .nav-button {
-            padding: 1.5rem;
+            padding: 1.2rem;
         }
         
         .nav-button-icon {
-            font-size: 2.5rem;
-            margin-right: 1rem;
-            min-width: 3rem;
+            font-size: 2rem;
+            margin-right: 0.8rem;
+            min-width: 2.5rem;
         }
         
         .nav-button-content h3 {
-            font-size: 1.1rem;
+            font-size: 1rem;
         }
         
         .nav-button-content p {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
         }
     }
 </style>
