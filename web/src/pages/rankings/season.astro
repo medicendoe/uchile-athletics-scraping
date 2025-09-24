@@ -1,63 +1,31 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { loadScrapingData, getAllEvents, formatTime, formatWind, formatDate, compareMeasurements } from '../../utils/dataUtils';
+import { loadScrapingData, formatTime, formatWind, formatDate, compareMeasurements } from '../../utils/dataUtils';
 
 const data = loadScrapingData();
-const athletes = data.data.athletes;
-const allEvents = getAllEvents(athletes);
-
-// Crear rankings de temporada por evento
-const createSeasonRanking = (eventName: string) => {
-    const records: Array<{
-        athlete: string;
-        athleteId: string;
-        measurement: string;
-        wind: string;
-        date: string;
-    }> = [];
-
-    athletes.forEach(athlete => {
-        // Solo marcas de temporada para "temporada actual"
-        athlete.seasonalBests
-            .filter(sb => sb.event === eventName)
-            .forEach(sb => {
-                records.push({
-                    athlete: athlete.name,
-                    athleteId: athlete.UpslatId,
-                    measurement: sb.record.measurement,
-                    wind: sb.record.wind,
-                    date: sb.date
-                });
-            });
-    });
-
-    // Determinar si es evento de tiempo o distancia
-    const isTimeEvent = !eventName.includes('Lanzamiento') && !eventName.includes('Salto');
-    
-    records.sort((a, b) => compareMeasurements(a.measurement, b.measurement, isTimeEvent));
-    
-    return records;
-};
+const mixedRankings = data.data.seasonalBests?.mixed || [];
 ---
 
-<Layout title="Mejores Marcas de la Temporada - Atletismo Stats">
-    <div class="page-title">📅 Mejores Marcas de la Temporada</div>
+<Layout title="Mejores Marcas de la Temporada - Mixto - Atletismo Stats">
+    <div class="page-title">📅 Mejores Marcas de la Temporada - Mixto</div>
     <p class="page-description">
-        Rankings actuales de las mejores marcas de la temporada por evento.
+        Rankings actuales de las mejores marcas de la temporada por evento (hombres y mujeres).
     </p>
 
     <div class="nav-buttons">
         <a href={import.meta.env.BASE_URL} class="nav-link">← Inicio</a>
-        <a href={`${import.meta.env.BASE_URL}rankings/all-time`} class="nav-link">Todos los Tiempos</a>
+        <a href={`${import.meta.env.BASE_URL}rankings/season-men`} class="nav-link">Solo Hombres</a>
+        <a href={`${import.meta.env.BASE_URL}rankings/season-women`} class="nav-link">Solo Mujeres</a>
+        <a href={`${import.meta.env.BASE_URL}rankings/all-time`} class="nav-link">Todos los Tiempos Mixto</a>
         <a href={`${import.meta.env.BASE_URL}athletes`} class="nav-link">Atletas</a>
     </div>
 
-    {allEvents.map(event => {
-        const ranking = createSeasonRanking(event);
-        return ranking.length > 0 && (
+    {mixedRankings.map(event => {
+        return event.records.length > 0 && (
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">{event}</h2>
+                    <h2 class="card-title">{event.event}</h2>
+                    <div class="card-subtitle">Categoría: Mixto (Hombres y Mujeres)</div>
                 </div>
                 <div class="card-body">
                     <div class="table-container">
@@ -66,13 +34,14 @@ const createSeasonRanking = (eventName: string) => {
                                 <tr>
                                     <th>Pos</th>
                                     <th>Atleta</th>
+                                    <th>Género</th>
                                     <th>Marca</th>
                                     <th>Viento</th>
                                     <th>Fecha</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {ranking.map((record, index) => (
+                                {event.records.map((record, index) => (
                                     <tr class={index < 3 ? `podium-${index + 1}` : ''}>
                                         <td class="position">
                                             {index === 0 && '🥇'}
@@ -81,9 +50,12 @@ const createSeasonRanking = (eventName: string) => {
                                             {index > 2 && (index + 1)}
                                         </td>
                                         <td class="athlete">
-                                            <a href={`${import.meta.env.BASE_URL}athletes/${record.athleteId}`}>
-                                                {record.athlete}
-                                            </a>
+                                            <span>{record.athlete}</span>
+                                        </td>
+                                        <td class="gender">
+                                            {record.gender === 'M' && '♂️'}
+                                            {record.gender === 'F' && '♀️'}
+                                            {!record.gender && '-'}
                                         </td>
                                         <td class="measurement">{formatTime(record.measurement)}</td>
                                         <td class="wind">{formatWind(record.wind) || '-'}</td>
@@ -98,11 +70,11 @@ const createSeasonRanking = (eventName: string) => {
         );
     })}
 
-    {allEvents.every(event => createSeasonRanking(event).length === 0) && (
+    {mixedRankings.length === 0 && (
         <div class="card">
             <div class="card-body">
                 <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">
-                    No hay marcas de temporada registradas aún.
+                    No hay datos de rankings mixtos de temporada disponibles.
                 </p>
             </div>
         </div>

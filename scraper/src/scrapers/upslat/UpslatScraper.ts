@@ -1,7 +1,7 @@
 import AbstractWebScraper from "../AbstractWebScraper";
 import { Page } from "puppeteer";
 import { IScrapeResult } from "../interfaces";
-import { IUpslatInput, IPBScrapeResult, IPB } from "./interfaces";
+import { IUpslatInput, IPBScrapeResult, IPB, IRankedPB } from "./interfaces";
 
 export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
 
@@ -11,21 +11,45 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
     protected baseUrl: string = 'https://atletismo.usplat.cl';
     private maxRetries: number;
     private retryDelay: number;
+    private allowedEvents: string[];
 
     constructor(input: IUpslatInput) {
         super();
         this.input = input;
         this.maxRetries = input.maxRetries || 5;
         this.retryDelay = input.retryDelay || 1000;
+        this.allowedEvents = input.allowedEvents || [];
         this.data = {
             url: this.baseUrl,
             timestamp: new Date().toISOString(),
             data: {
                 athletes: [],
-                seasonalBests: [],
-                allTimeBests: []
+                seasonalBests: {
+                    men: [],
+                    women: [],
+                    mixed: []
+                },
+                allTimeBests: {
+                    men: [],
+                    women: [],
+                    mixed: []
+                }
             }
         }
+    }
+
+    /**
+     * Método helper para verificar si un evento está permitido
+     */
+    private isEventAllowed(eventName: string): boolean {
+        if (this.allowedEvents.length === 0) {
+            return true; // Si no hay filtros, permitir todos los eventos
+        }
+        
+        const eventNameUpper = eventName.toUpperCase();
+        return this.allowedEvents.some(allowedEvent => 
+            eventNameUpper.includes(allowedEvent) || allowedEvent.includes(eventNameUpper)
+        );
     }
 
     /**
@@ -188,26 +212,57 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                 await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
             }, `Navegación a página del atleta ${athleteId} para registros de temporada`);
 
-            const seasonData = await this.page.evaluate(() => {
+            const seasonData = await this.page.evaluate((allowedEvents: string[]) => {
 
-                function isTimeImprovement(newTime: string, currentBest: string): boolean {
-                    const newTimeParts = newTime.split(':').map(Number);
-                    const currentBestParts = currentBest.split(':').map(Number);
-
-                    if (newTimeParts.length > currentBestParts.length) {
-                        return false;
-                    } else if (newTimeParts.length < currentBestParts.length) {
-                        return true;
+                function isEventAllowed(eventName: string, allowedEvents: string[]): boolean {
+                    if (allowedEvents.length === 0) {
+                        return true; // Si no hay filtros, permitir todos los eventos
                     }
+                    
+                    const eventNameUpper = eventName.toUpperCase();
+                    return allowedEvents.some(allowedEvent => 
+                        eventNameUpper.includes(allowedEvent) || allowedEvent.includes(eventNameUpper)
+                    );
+                }
 
-                    for (let i = 0; i < Math.min(newTimeParts.length, currentBestParts.length); i++) {
-                        if (newTimeParts[i] < currentBestParts[i]) {
-                            return true;
-                        } else if (newTimeParts[i] > currentBestParts[i]) {
+                function isBetterPerformance(newMeasurement: string, currentBest: string, eventName: string): boolean {
+                    // Determinar si es un evento de campo (lanzamientos/saltos) donde mayor es mejor
+                    const isFieldEvent = eventName.toLowerCase().includes('lanzamiento') || 
+                                        eventName.toLowerCase().includes('salto');
+                    
+                    // Si es un tiempo (contiene ':')
+                    if (newMeasurement.includes(':') || currentBest.includes(':')) {
+                        const newTimeParts = newMeasurement.split(':').map(Number);
+                        const currentBestParts = currentBest.split(':').map(Number);
+
+                        if (newTimeParts.length > currentBestParts.length) {
                             return false;
+                        } else if (newTimeParts.length < currentBestParts.length) {
+                            return true;
+                        }
+
+                        for (let i = 0; i < Math.min(newTimeParts.length, currentBestParts.length); i++) {
+                            if (newTimeParts[i] < currentBestParts[i]) {
+                                return true;
+                            } else if (newTimeParts[i] > currentBestParts[i]) {
+                                return false;
+                            }
+                        }
+                        return false;
+                    } 
+                    // Si es una distancia/altura (número decimal)
+                    else {
+                        const newValue = parseFloat(newMeasurement);
+                        const currentValue = parseFloat(currentBest);
+                        
+                        if (isFieldEvent) {
+                            // Para eventos de campo, mayor es mejor
+                            return newValue > currentValue;
+                        } else {
+                            // Para eventos de pista, menor es mejor
+                            return newValue < currentValue;
                         }
                     }
-                    return false;
                 }
 
                 let results: IPB[] = [];
@@ -216,6 +271,11 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                 for (let eventElement of Array.from(events)) {
 
                     const eventName = eventElement.querySelector('.panel-heading h4 a')?.textContent?.trim() || '';
+
+                    // Filtrar eventos si están especificados
+                    if (!isEventAllowed(eventName, allowedEvents)) {
+                        continue;
+                    }
 
                     let best: IPB = {
                         event: eventName,
@@ -242,7 +302,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                             const currentYear = new Date().getFullYear();
 
                             if (recordYear !== currentYear) break;
-                            if(measurement && (!best.record.measurement || isTimeImprovement(measurement, best.record.measurement))) {
+                            if(measurement && (!best.record.measurement || isBetterPerformance(measurement, best.record.measurement, eventName))) {
                                 best.record.measurement = measurement;
                                 best.record.wind = wind;
                                 best.date = date;
@@ -256,7 +316,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                 }
                 
                 return results;
-            });
+            }, this.allowedEvents);
 
             return seasonData;
 
@@ -276,7 +336,18 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                 await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
             }, `Navegación a página del atleta ${athleteId} para registros personales`);
 
-            const personalData = await this.page.evaluate(() => {
+            const personalData = await this.page.evaluate((allowedEvents: string[]) => {
+
+                function isEventAllowed(eventName: string, allowedEvents: string[]): boolean {
+                    if (allowedEvents.length === 0) {
+                        return true; // Si no hay filtros, permitir todos los eventos
+                    }
+                    
+                    const eventNameUpper = eventName.toUpperCase();
+                    return allowedEvents.some(allowedEvent => 
+                        eventNameUpper.includes(allowedEvent) || allowedEvent.includes(eventNameUpper)
+                    );
+                }
 
                 let results: IPB[] = [];
 
@@ -284,9 +355,15 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
 
                 for (let eventElement of Array.from(events)) {
                     const data = Array.from(eventElement.querySelectorAll('td'));
+                    const eventName = data[0].textContent?.trim() || '';
+
+                    // Filtrar eventos si están especificados
+                    if (!isEventAllowed(eventName, allowedEvents)) {
+                        continue;
+                    }
 
                     results.push({
-                        event: data[0].textContent?.trim() || '',
+                        event: eventName,
                         record: {
                             wind: data[2].textContent?.trim() || '',
                             measurement: data[1].textContent?.trim() || '',
@@ -296,7 +373,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                 }
 
                 return results;
-            });
+            }, this.allowedEvents);
 
             return personalData;
 
@@ -304,6 +381,97 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
             console.error('Error en getPersonalPBs:', error);
             throw new Error('No se pudo obtener los mejores registros personales.');
         }
+    }
+
+    private addRecordToRanking(rankingArray: IRankedPB[], eventName: string, athlete: { name: string, gender?: 'M' | 'F' }, record: IPB, gender?: 'M' | 'F'): void {
+        // Filtrar eventos si están especificados
+        if (!this.isEventAllowed(eventName)) {
+            return;
+        }
+
+        let existingEvent = rankingArray.find((event) => event.event === eventName);
+
+        if (!existingEvent) {
+            existingEvent = {
+                event: eventName,
+                records: []
+            };
+            rankingArray.push(existingEvent);
+        }
+        
+        const existingRecord = existingEvent.records.find((r) => r.athlete === athlete.name);
+        if (!existingRecord) {
+            existingEvent.records.push({
+                athlete: athlete.name,
+                measurement: record.record.measurement,
+                wind: record.record.wind,
+                date: record.date,
+                gender: gender
+            });
+        }
+    }
+
+    private processRankingsByGender(): void {
+        for (const athlete of this.data.data.athletes) {
+            const gender = athlete.gender;
+
+            // Process personal bests (all-time)
+            if (athlete.personalBests.length > 0) {
+                for (const pb of athlete.personalBests) {
+                    // Add to gender-specific ranking
+                    if (gender === 'M') {
+                        this.addRecordToRanking(this.data.data.allTimeBests.men, pb.event, athlete, pb, gender);
+                    } else if (gender === 'F') {
+                        this.addRecordToRanking(this.data.data.allTimeBests.women, pb.event, athlete, pb, gender);
+                    }
+                    
+                    // Always add to mixed ranking
+                    this.addRecordToRanking(this.data.data.allTimeBests.mixed, pb.event, athlete, pb, gender);
+                }
+            }
+
+            // Process seasonal bests
+            if (athlete.seasonalBests.length > 0) {
+                for (const sb of athlete.seasonalBests) {
+                    // Add to gender-specific ranking
+                    if (gender === 'M') {
+                        this.addRecordToRanking(this.data.data.seasonalBests.men, sb.event, athlete, sb, gender);
+                    } else if (gender === 'F') {
+                        this.addRecordToRanking(this.data.data.seasonalBests.women, sb.event, athlete, sb, gender);
+                    }
+                    
+                    // Always add to mixed ranking
+                    this.addRecordToRanking(this.data.data.seasonalBests.mixed, sb.event, athlete, sb, gender);
+                }
+            }
+        }
+    }
+
+    private sortRankingArray(rankingArray: IRankedPB[]): void {
+        for (const event of rankingArray) {
+            const isFieldEvent = event.event.toLowerCase().includes('lanzamiento') || 
+                                event.event.toLowerCase().includes('salto');
+            
+            event.records.sort((a, b) => {
+                const measurementA = this.parseTimeOrDistance(a.measurement);
+                const measurementB = this.parseTimeOrDistance(b.measurement);
+                
+                if (isFieldEvent) {
+                    return measurementB - measurementA;
+                } else {
+                    return measurementA - measurementB;
+                }
+            });
+        }
+    }
+
+    private sortAllRankings(): void {
+        this.sortRankingArray(this.data.data.allTimeBests.men);
+        this.sortRankingArray(this.data.data.allTimeBests.women);
+        this.sortRankingArray(this.data.data.allTimeBests.mixed);
+        this.sortRankingArray(this.data.data.seasonalBests.men);
+        this.sortRankingArray(this.data.data.seasonalBests.women);
+        this.sortRankingArray(this.data.data.seasonalBests.mixed);
     }
 
     async scrape(): Promise<IScrapeResult<IPBScrapeResult>> {
@@ -329,76 +497,17 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
             this.data.data.athletes.push({
                 name: athlete.name,
                 UpslatId: athleteId,
+                gender: athlete.gender,
                 personalBests: personalBests,
                 seasonalBests: seasonalBests
             });
         }
 
-        for( const athlete of this.data.data.athletes ) {
-            if (athlete.personalBests.length > 0) {
-                for( const pb of athlete.personalBests ) {
-                    let existingEvent = this.data.data.allTimeBests.find((event) => event.event === pb.event);
-
-                    if (!existingEvent) {
-                        existingEvent = {
-                            event: pb.event,
-                            records: []
-                        };
-                        this.data.data.allTimeBests.push(existingEvent);
-                    }
-                    
-                    const existingRecord = existingEvent.records.find(record => record.athlete === athlete.name);
-                    if (!existingRecord) {
-                        existingEvent.records.push({
-                            athlete: athlete.name,
-                            measurement: pb.record.measurement,
-                            wind: pb.record.wind,
-                            date: pb.date
-                        });
-                    }
-                }
-            }
-
-            if (athlete.seasonalBests.length > 0) {
-                for( const sb of athlete.seasonalBests ) {
-                    let existingEvent = this.data.data.seasonalBests.find((event) => event.event === sb.event);
-                    
-                    if (!existingEvent) {
-                        existingEvent = {
-                            event: sb.event,
-                            records: []
-                        };
-                        this.data.data.seasonalBests.push(existingEvent);
-                    }
-                    
-                    const existingRecord = existingEvent.records.find(record => record.athlete === athlete.name);
-                    if (!existingRecord) {
-                        existingEvent.records.push({
-                            athlete: athlete.name,
-                            measurement: sb.record.measurement,
-                            wind: sb.record.wind,
-                            date: sb.date
-                        });
-                    }
-                }
-            }
-        }
-
-        for (const event of [...this.data.data.seasonalBests, ...this.data.data.allTimeBests]) {
-            const isFieldEvent = event.event.toLowerCase().includes('lanzamiento') || 
-                                event.event.toLowerCase().includes('salto');
-            
-            event.records.sort((a, b) => {
-                const measurementA = this.parseTimeOrDistance(a.measurement);
-                const measurementB = this.parseTimeOrDistance(b.measurement);
-                
-                if (isFieldEvent) {
-                    return measurementB - measurementA;
-                } else {
-                    return measurementA - measurementB;
-                }
-            });
-        }
+        // Process rankings by gender
+        this.processRankingsByGender();
+        
+        // Sort all rankings
+        this.sortAllRankings();
 
         await this.page.close();
         return this.data;
