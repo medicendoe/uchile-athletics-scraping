@@ -1,7 +1,7 @@
 import AbstractWebScraper from "../AbstractWebScraper";
 import { Page } from "puppeteer";
 import { IScrapeResult } from "../interfaces";
-import { IUpslatInput, IPBScrapeResult, IPB, IRankedPB } from "./interfaces";
+import { IUpslatInput, IPBScrapeResult, IPB, IRankedPB, IEventInput } from "./interfaces";
 
 export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
 
@@ -11,7 +11,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
     protected baseUrl: string = 'https://atletismo.usplat.cl';
     private maxRetries: number;
     private retryDelay: number;
-    private allowedEvents: string[];
+    private allowedEvents: IEventInput[];
 
     constructor(input: IUpslatInput) {
         super();
@@ -39,15 +39,25 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
     }
 
     /**
-     * Método helper para verificar si un evento está permitido
+     * Retorna los nombres de eventos que aplican al género del atleta.
+     * M -> eventos M y X, F -> eventos F y X, sin género -> todos.
      */
-    private isEventAllowed(eventName: string): boolean {
+    private getEventNamesForGender(gender?: 'M' | 'F'): string[] {
+        return this.allowedEvents
+            .filter(event => !gender || event.gender === 'X' || event.gender === gender)
+            .map(event => event.name);
+    }
+
+    /**
+     * Método helper para verificar si un evento está permitido para un género
+     */
+    private isEventAllowed(eventName: string, gender?: 'M' | 'F'): boolean {
         if (this.allowedEvents.length === 0) {
             return true; // Si no hay filtros, permitir todos los eventos
         }
-        
+
         const eventNameUpper = eventName.toUpperCase();
-        return this.allowedEvents.some(allowedEvent => 
+        return this.getEventNamesForGender(gender).some(allowedEvent =>
             eventNameUpper.includes(allowedEvent) || allowedEvent.includes(eventNameUpper)
         );
     }
@@ -202,7 +212,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
         }
     }
 
-    async getSeasonPBs(athleteId: string): Promise<IPB[]> {
+    async getSeasonPBs(athleteId: string, allowedEvents: string[]): Promise<IPB[]> {
         console.log(`Obteniendo mejores registros de la temporada para el atleta ID: ${athleteId}`);
         try {
 
@@ -316,7 +326,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                 }
                 
                 return results;
-            }, this.allowedEvents);
+            }, allowedEvents);
 
             return seasonData;
 
@@ -326,7 +336,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
         }
     }
 
-    async getPersonalPBs(athleteId: string): Promise<IPB[]> {
+    async getPersonalPBs(athleteId: string, allowedEvents: string[]): Promise<IPB[]> {
         console.log(`Obteniendo mejores registros personales para el atleta ID: ${athleteId}`);
         try {
 
@@ -373,7 +383,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                 }
 
                 return results;
-            }, this.allowedEvents);
+            }, allowedEvents);
 
             return personalData;
 
@@ -385,7 +395,7 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
 
     private addRecordToRanking(rankingArray: IRankedPB[], eventName: string, athlete: { name: string, gender?: 'M' | 'F' }, record: IPB, gender?: 'M' | 'F'): void {
         // Filtrar eventos si están especificados
-        if (!this.isEventAllowed(eventName)) {
+        if (!this.isEventAllowed(eventName, athlete.gender)) {
             return;
         }
 
@@ -491,8 +501,17 @@ export default class UpslatScraper extends AbstractWebScraper<IPBScrapeResult> {
                 continue;
             }
 
-            const personalBests = await this.getPersonalPBs(athleteId);
-            const seasonalBests = await this.getSeasonPBs(athleteId);
+            const athleteEvents = this.getEventNamesForGender(athlete.gender);
+
+            // Si hay filtro de eventos pero ninguno aplica a este género, no hay nada que buscar
+            // (una lista vacía en los scrapers significa "todos los eventos")
+            const hasEventsToScrape = this.allowedEvents.length === 0 || athleteEvents.length > 0;
+            if (!hasEventsToScrape) {
+                console.warn(`Ningún evento configurado aplica al género del atleta: ${athlete.name}`);
+            }
+
+            const personalBests = hasEventsToScrape ? await this.getPersonalPBs(athleteId, athleteEvents) : [];
+            const seasonalBests = hasEventsToScrape ? await this.getSeasonPBs(athleteId, athleteEvents) : [];
 
             this.data.data.athletes.push({
                 name: athlete.name,

@@ -29,12 +29,13 @@ Crea un archivo `.env` con las siguientes variables:
 UPSLAT_USERNAME=tu_email@ejemplo.com
 UPSLAT_PASSWORD=tu_contraseña
 
-# Lista de atletas separados por comas con género
-ATHLETES="Juan Pérez; M, María González; F, Carlos Silva; M"
+# Lista de atletas (formato tipo CSV: ';' separa atletas, ',' separa nombre y género)
+# Género: M (hombre) o F (mujer)
+ATHLETES="Juan Pérez,M;María González,F;Carlos Silva,M"
 
-# Lista de eventos a filtrar (opcional, separados por comas)
-# Si se omite, se obtendrán todos los eventos
-EVENTS="100 metros, 200 metros, 400 metros, 800 metros, 1.500 metros, Salto largo, Salto alto, Lanzamiento bala"
+# Lista de eventos a filtrar (mismo formato: ';' separa eventos, ',' separa nombre y género)
+# Género: M (solo hombres), F (solo mujeres) o X (ambos). Sin género se asume X
+EVENTS="100 metros,X;200 metros,X;100 metros vallas,F;110 metros vallas,M;Salto largo,X;Lanzamiento bala,X"
 
 # Configuración
 NODE_ENV=production
@@ -78,15 +79,25 @@ El scraper permite filtrar qué eventos deportivos obtener mediante la variable 
 
 ### Configuración de Filtros
 
+Formato tipo CSV, igual que `ATHLETES`: `;` separa eventos y `,` separa el nombre del género.
+
+| Género | Se busca para |
+|--------|---------------|
+| `M`    | Solo atletas hombres |
+| `F`    | Solo atletas mujeres |
+| `X`    | Ambos géneros (valor por defecto si se omite) |
+
+Los atletas sin género configurado buscan todos los eventos de la lista.
+
 ```bash
-# Ejemplo: Solo eventos de velocidad
-EVENTS="100 metros, 200 metros, 400 metros"
+# Ejemplo: Velocidad para ambos géneros y vallas cortas según género
+EVENTS="100 metros,X;200 metros,X;100 metros vallas,F;110 metros vallas,M"
 
-# Ejemplo: Solo saltos
-EVENTS="Salto largo, Salto alto, Salto triple, Salto con garrocha"
+# Ejemplo: Solo saltos (sin género = X)
+EVENTS="Salto largo;Salto alto;Salto triple;Salto con garrocha"
 
-# Ejemplo: Solo lanzamientos
-EVENTS="Lanzamiento bala, Lanzamiento disco, Lanzamiento martillo, Lanzamiento jabalina"
+# Ejemplo: Lanzamientos
+EVENTS="Lanzamiento bala,X;Lanzamiento disco,X;Lanzamiento martillo,X;Lanzamiento jabalina,X"
 
 # Si no se especifica EVENTS, se obtienen todos los eventos disponibles
 ```
