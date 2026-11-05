@@ -1,6 +1,19 @@
 import "dotenv/config";
 import { IWebScraper } from "./scrapers/interfaces";
 import UpslatScraper from "./scrapers/upslat/UpslatScraper";
+import { IAthleteInput, IEventInput } from "./scrapers/upslat/interfaces";
+
+/**
+ * Parsea una variable de entorno con formato tipo CSV:
+ * ';' separa filas y ',' separa columnas. Ej: "Nombre Uno,M;Nombre Dos,F"
+ */
+function parseRows(value?: string): string[][] {
+    if (!value) return [];
+    return value
+        .split(';')
+        .map(row => row.split(',').map(column => column.trim()))
+        .filter(columns => columns[0]);
+}
 
 function validateEnv() {
     const requiredEnvVars = [
@@ -22,27 +35,34 @@ async function main() {
 
     validateEnv();
 
-    // Parse athletes with gender information
-    const athletesWithGender = process.env.ATHLETES ? 
-        process.env.ATHLETES.split(',').map(athleteString => {
-            const trimmed = athleteString.trim();
-            const parts = trimmed.split(';');
-            if (parts.length >= 2) {
-                const name = parts[0].trim();
-                const gender = parts[1].trim() as 'M' | 'F';
-                return { name, gender };
-            }
-            return { name: trimmed };
-        }) : [];
+    // Formato tipo CSV: ';' separa filas y ',' separa columnas (nombre,género)
+    const athletes: IAthleteInput[] = parseRows(process.env.ATHLETES).map(([name, gender]) => {
+        const normalizedGender = gender?.toUpperCase();
+        if (normalizedGender === 'M' || normalizedGender === 'F') {
+            return { name, gender: normalizedGender };
+        }
+        if (gender) {
+            console.warn(`Género inválido "${gender}" para el atleta "${name}". Se ignorará el género.`);
+        }
+        return { name };
+    });
 
-    // Parse events and convert to uppercase for filtering
-    const allowedEvents = process.env.EVENTS ? 
-        process.env.EVENTS.split(',').map(event => event.trim().toUpperCase()) : [];
+    // Eventos en mayúsculas para el filtrado. Género: M, F o X (ambos). Sin género -> X
+    const allowedEvents: IEventInput[] = parseRows(process.env.EVENTS).map(([name, gender]) => {
+        const normalizedGender = gender?.toUpperCase();
+        if (normalizedGender === 'M' || normalizedGender === 'F' || normalizedGender === 'X') {
+            return { name: name.toUpperCase(), gender: normalizedGender };
+        }
+        if (gender) {
+            console.warn(`Género inválido "${gender}" para el evento "${name}". Se usará X (ambos).`);
+        }
+        return { name: name.toUpperCase(), gender: 'X' };
+    });
 
     const scraper: IWebScraper = new UpslatScraper({
         username: process.env.UPSLAT_USERNAME || '',
         password: process.env.UPSLAT_PASSWORD || '',
-        athletes: athletesWithGender,
+        athletes: athletes,
         allowedEvents: allowedEvents,
         maxRetries: 15,
         retryDelay: 3000,
